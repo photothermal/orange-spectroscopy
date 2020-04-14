@@ -331,76 +331,6 @@ class HDF5Reader_ROCK(FileFormat, SpectralFileFormat):
         return _spectra_from_image(intensities, energies, x_locs, y_locs)
 
 
-class PhotothermalReader(FileFormat, SpectralFileFormat):
-    """ Reader for .ptir HDF5 files from Photothermal systems"""
-    EXTENSIONS = ('.ptir',)
-    DESCRIPTION = 'PTIR Studio file'
-
-    def read_spectra(self):
-        import h5py
-        hdf5_file = h5py.File(self.filename,'r')
-        keys = list(hdf5_file.keys())
-
-        intensities = []
-        wavenumbers = []
-        x_locs = []
-        y_locs = []
-
-        # check for heightmaps
-        if keys.__contains__('Heightmaps'):
-            heightmaps = hdf5_file['Heightmaps']
-            for heightmap_name in heightmaps.keys():
-                heightmap = heightmaps[heightmap_name]
-                if heightmap.attrs['Checked'] is False:
-                    continue
-                intensities = heightmap
-                break
-
-        # load measurements
-        if len(intensities) == 0:
-            for meas_name in filter(lambda s: s.startswith('Measurement'), keys):
-                hdf5_meas = hdf5_file[meas_name]
-
-                meas_keys = list(hdf5_meas.keys())
-                meas_attrs = hdf5_meas.attrs
-
-                spec_vals = hdf5_meas['Spectroscopic_Values']
-                pos_vals = hdf5_meas['Position_Values']
-                hyperspectra = pos_vals.shape[0] > 1
-
-                # ignore backgrounds and unchecked data
-                if not hyperspectra and (meas_attrs['IsBackground'] is True or meas_attrs['Checked'] is False):
-                    continue
-
-                if len(wavenumbers) == 0:
-                    wavenumbers = spec_vals[0,:]
-
-                if hyperspectra:
-                    x_locs.append(pos_vals[:,0])
-                    y_locs.append(pos_vals[:,1])
-                else:
-                    x_locs.append(meas_attrs['LocationX'])
-                    y_locs.append(meas_attrs['LocationY'])
-
-                # load channels
-                for chan_name in filter(lambda s: s.startswith('Channel'), meas_keys):
-                    hdf5_chan = hdf5_meas[chan_name]
-                    data = hdf5_chan['Raw_Data']
-                    if hyperspectra:
-                        rows = meas_attrs['RangeYPoints'][0]
-                        cols = meas_attrs['RangeXPoints'][0]
-                        intensities = np.reshape(data, (rows,cols,data.shape[1]))
-                        break
-                    else:
-                        intensities.append(data[0,:])
-
-        intensities = np.array(intensities)
-        features = np.array(wavenumbers)
-        x_locs = np.array(x_locs).flatten()
-        y_locs = np.array(y_locs).flatten()
-        return _spectra_from_image(intensities, features, x_locs, y_locs)
-
-
 class OmnicMapReader(FileFormat, SpectralFileFormat):
     """ Reader for files with two columns of numbers (X and Y)"""
     EXTENSIONS = ('.map',)
@@ -1264,6 +1194,98 @@ class NeaReaderGSF(FileFormat, SpectralFileFormat):
     def _gsf_reader(self, path):
         X, _, _ = reader_gsf(path)
         return np.asarray(X)
+
+
+class PTIRFileReader(FileFormat, SpectralFileFormat):
+    """ Reader for .ptir HDF5 files from Photothermal systems"""
+    EXTENSIONS = ('.ptir',)
+    DESCRIPTION = 'PTIR Studio file'
+    PRIORITY = 1
+
+    data_signal = ''
+
+    def get_channels(self):
+        import h5py
+        hdf5_file = h5py.File(self.filename, 'r')
+        keys = list(hdf5_file.keys())
+
+        # map all unique data channels
+        channelMap = {}
+        for meas_name in filter(lambda s: s.startswith('Measurement'), keys):
+            hdf5_meas = hdf5_file[meas_name]
+            meas_keys = list(hdf5_meas.keys())
+
+            for chan_name in filter(lambda s: s.startswith('Channel'), meas_keys):
+                hdf5_chan = hdf5_meas[chan_name]
+                signal = hdf5_chan.attrs['DataSignal']
+                if channelMap.keys().__contains__(signal) is False:
+                    label = hdf5_chan.attrs['Label']
+                    channelMap[signal] = label
+
+        return channelMap
+
+    def read_spectra(self):
+        if self.data_signal == '':
+            return
+
+        import h5py
+        hdf5_file = h5py.File(self.filename,'r')
+        keys = list(hdf5_file.keys())
+
+        intensities = []
+        wavenumbers = []
+        x_locs = []
+        y_locs = []
+
+        # load measurements
+        if len(intensities) == 0:
+            for meas_name in filter(lambda s: s.startswith('Measurement'), keys):
+                hdf5_meas = hdf5_file[meas_name]
+
+                meas_keys = list(hdf5_meas.keys())
+                meas_attrs = hdf5_meas.attrs
+
+                spec_vals = hdf5_meas['Spectroscopic_Values']
+                pos_vals = hdf5_meas['Position_Values']
+                hyperspectra = pos_vals.shape[0] > 1
+
+                # ignore backgrounds and unchecked data
+                if not hyperspectra and (meas_attrs['IsBackground'] is True or meas_attrs['Checked'] is False):
+                    continue
+
+                if len(wavenumbers) == 0:
+                    wavenumbers = spec_vals[0,:]
+
+                if hyperspectra:
+                    x_locs.append(pos_vals[:,0])
+                    y_locs.append(pos_vals[:,1])
+                else:
+                    x_locs.append(meas_attrs['LocationX'])
+                    y_locs.append(meas_attrs['LocationY'])
+
+                # load channels
+                for chan_name in filter(lambda s: s.startswith('Channel'), meas_keys):
+                    hdf5_chan = hdf5_meas[chan_name]
+                    chan_attrs = hdf5_chan.attrs
+
+                    signal = chan_attrs['DataSignal']
+                    if signal != self.data_signal:
+                        continue
+
+                    data = hdf5_chan['Raw_Data']
+                    if hyperspectra:
+                        rows = meas_attrs['RangeYPoints'][0]
+                        cols = meas_attrs['RangeXPoints'][0]
+                        intensities = np.reshape(data, (rows,cols,data.shape[1]))
+                        break
+                    else:
+                        intensities.append(data[0,:])
+
+        intensities = np.array(intensities)
+        features = np.array(wavenumbers)
+        x_locs = np.array(x_locs).flatten()
+        y_locs = np.array(y_locs).flatten()
+        return _spectra_from_image(intensities, features, x_locs, y_locs)
 
 
 class TileFileFormat:
