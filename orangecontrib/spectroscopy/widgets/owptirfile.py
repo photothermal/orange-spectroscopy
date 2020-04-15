@@ -261,7 +261,8 @@ class OWPTIRfile(widget.OWWidget, RecentPathsWComboMixin):
             return self.Error.file_not_found
 
         try:
-            self.reader = self._get_reader()
+            if self.reader is not PTIRFileReader:
+                self.reader = self._get_reader()
             assert self.reader is not None
         except Exception:
             return self.Error.missing_reader
@@ -379,7 +380,6 @@ class OWPTIRfile(widget.OWWidget, RecentPathsWComboMixin):
                 self.Warning.performance_warning()
 
     def apply_domain_edit(self):
-        self.Warning.performance_warning.clear()
         if self.data is None:
             table = None
         else:
@@ -472,9 +472,7 @@ class OWPTIRfile(widget.OWWidget, RecentPathsWComboMixin):
             start_file = self.last_path() or os.path.expanduser("~/")
 
         readers = [PTIRFileReader,]
-        print('readers[0] type: ' + str(type(readers[0])))
-        filename, reader, _ = open_filename_dialog(start_file, None, readers)
-        print('reader type: ' + str(type(reader)))
+        filename, reader, _ = open_filename_dialog(start_file, None, readers, False, "Open PTIR File")
         if not filename:
             return
         self.add_path(filename)
@@ -482,10 +480,11 @@ class OWPTIRfile(widget.OWWidget, RecentPathsWComboMixin):
 
         self.source = self.LOCAL_FILE
 
-        self.data_channels = reader.get_channels()
+        self.reader = self._get_reader()
+        self.data_channels = self.reader.get_channels()
         if len(self.data_channels) > 0:
             self.load_channels()
-            self.data_channel = self.data_channels.keys()[0]
+            self.data_channel = list(self.data_channels.keys())[0]
 
         # load data (uses the first channel)
         self.load_data()
@@ -496,11 +495,14 @@ class OWPTIRfile(widget.OWWidget, RecentPathsWComboMixin):
         -------
         FileFormat
         """
-        return PTIRFileReader
+        if self.source == self.LOCAL_FILE:
+            path = self.last_path()
+            reader = PTIRFileReader(path)
+            return reader
 
     def load_channels(self):
         self.channel_combo.clear()
-        self.channel_combo.addItems(self.data_channels.values())
+        self.channel_combo.addItems(v.decode('utf-8') for v in self.data_channels.values())
 
     def select_channel(self):
         channel = self.channel_combo.currentText()

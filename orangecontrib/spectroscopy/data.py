@@ -1257,8 +1257,10 @@ class PTIRFileReader(FileFormat, SpectralFileFormat):
                     wavenumbers = spec_vals[0,:]
 
                 if hyperspectra:
-                    x_locs.append(pos_vals[:,0])
-                    y_locs.append(pos_vals[:,1])
+                    x_len = meas_attrs['RangeXPoints'][0]
+                    y_len = meas_attrs['RangeYPoints'][0]
+                    x_locs.append(pos_vals[:x_len,0])
+                    y_locs.append(pos_vals[:y_len,1])
                 else:
                     x_locs.append(meas_attrs['LocationX'])
                     y_locs.append(meas_attrs['LocationY'])
@@ -1276,7 +1278,7 @@ class PTIRFileReader(FileFormat, SpectralFileFormat):
                     if hyperspectra:
                         rows = meas_attrs['RangeYPoints'][0]
                         cols = meas_attrs['RangeXPoints'][0]
-                        intensities = np.reshape(data, (rows,cols,data.shape[1]))
+                        intensities = np.reshape(data, (rows,cols,data.shape[1])) # organized rows, columns, wavelengths
                         break
                     else:
                         intensities.append(data[0,:])
@@ -1285,7 +1287,10 @@ class PTIRFileReader(FileFormat, SpectralFileFormat):
         features = np.array(wavenumbers)
         x_locs = np.array(x_locs).flatten()
         y_locs = np.array(y_locs).flatten()
-        return _spectra_from_image(intensities, features, x_locs, y_locs)
+        if hyperspectra:
+            return _spectra_from_image(intensities, features, x_locs, y_locs)
+        else:
+            return features, intensities
 
 
 class TileFileFormat:
