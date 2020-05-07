@@ -1215,13 +1215,19 @@ class PTIRFileReader(FileFormat, SpectralFileFormat):
             hdf5_meas = hdf5_file[meas_name]
             meas_keys = list(hdf5_meas.keys())
 
+            # skip background measurements
+            try:
+                if hdf5_meas.attrs['IsBackground'][0]:
+                    continue
+            except:
+                print('PTIR file missing \'IsBackground\' attribute')
+
             for chan_name in filter(lambda s: s.startswith('Channel'), meas_keys):
                 hdf5_chan = hdf5_meas[chan_name]
                 signal = hdf5_chan.attrs['DataSignal']
-                if channelMap.keys().__contains__(signal) is False:
+                if not channelMap.keys().__contains__(signal):
                     label = hdf5_chan.attrs['Label']
                     channelMap[signal] = label
-
         return channelMap
 
     def read_spectra(self):
@@ -1250,7 +1256,14 @@ class PTIRFileReader(FileFormat, SpectralFileFormat):
                 hyperspectra = pos_vals.shape[0] > 1
 
                 # ignore backgrounds and unchecked data
-                if not hyperspectra and (meas_attrs['IsBackground'] is True or meas_attrs['Checked'] is False):
+                background = False
+                checked = True
+                try:
+                    checked = meas_attrs['Checked'][0]
+                    background = meas_attrs['IsBackground'][0]
+                except:
+                    print('PTIR file missing \'Checked\' or \'IsBackground\' attributes')
+                if not hyperspectra and (background or not checked):
                     continue
 
                 if len(wavenumbers) == 0:
