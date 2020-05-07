@@ -75,7 +75,7 @@ class OWPTIRfile(widget.OWWidget, RecentPathsWComboMixin):
 
     domain_editor = SettingProvider(DomainEditor)
 
-    data_channel = Setting("")
+    data_channel = ContextSetting("")
     data_channels = {}
 
     class Warning(widget.OWWidget.Warning):
@@ -278,7 +278,7 @@ class OWPTIRfile(widget.OWWidget, RecentPathsWComboMixin):
 
         with catch_warnings(record=True) as warnings:
             try:
-                self.reader.data_signal = self.data_channel # must set data signal before reading
+                self.reader.data_signal = self.get_data_signal() # must set data signal before reading
                 data = self.reader.read()
             except Exception as ex:
                 log.exception(ex)
@@ -483,8 +483,11 @@ class OWPTIRfile(widget.OWWidget, RecentPathsWComboMixin):
         self.reader = self._get_reader()
         self.data_channels = self.reader.get_channels()
         if len(self.data_channels) > 0:
+            # decode byte strings for labels before loading
+            for signal, label in self.data_channels.items():
+                self.data_channels[signal] = label.decode('utf-8')
             self.load_channels()
-            self.data_channel = list(self.data_channels.keys())[0]
+            self.data_channel = list(self.data_channels.values())[0]
 
         # load data (uses the first channel)
         self.load_data()
@@ -502,13 +505,16 @@ class OWPTIRfile(widget.OWWidget, RecentPathsWComboMixin):
 
     def load_channels(self):
         self.channel_combo.clear()
-        self.channel_combo.addItems(v.decode('utf-8') for v in self.data_channels.values())
+        self.channel_combo.addItems(self.data_channels.values())
 
     def select_channel(self):
-        channel = self.channel_combo.currentText()
+        self.load_data()
+
+    def get_data_signal(self):
         for signal, label in self.data_channels.items():
-            if label == channel:
-                self.data_channel = signal
+            if label == self.data_channel:
+                return signal
+        return list(self.data_channels.keys())[0]
 
 
 if __name__ == "__main__":
