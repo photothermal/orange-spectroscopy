@@ -1251,32 +1251,59 @@ class PTIRFileReader(FileFormat, SpectralFileFormat):
                 meas_keys = list(hdf5_meas.keys())
                 meas_attrs = hdf5_meas.attrs
 
-                spec_vals = hdf5_meas['Spectroscopic_Values']
-                pos_vals = hdf5_meas['Position_Values']
+                spec_vals = []
+                try:
+                    if meas_attrs.keys().__contains__('RangeWavenumberStart'):
+                        wn_start = meas_attrs['RangeWavenumberStart'][0]
+                        wn_end = meas_attrs['RangeWavenumberEnd'][0]
+                        wn_points = meas_attrs['RangeWavenumberPoints'][0]
+                        spec_vals = np.linspace(wn_start, wn_end, wn_points)
+                except:
+                    print('PTIR file missing \'RangeWavenumber\' attributes')
+
+                pos_vals = []
+                try:
+                    if meas_attrs.keys().__contains__('RangeXStart'):
+                        x_start = meas_attrs['RangeXStart'][0]
+                        x_points = meas_attrs['RangeXPoints'][0]
+                        x_incr = meas_attrs['RangeXIncrement'][0]
+                        if meas_attrs.keys().__contains__('RangeYStart'):
+                            y_start = meas_attrs['RangeYStart'][0]
+                            y_points = meas_attrs['RangeYPoints'][0]
+                            y_incr = meas_attrs['RangeYIncrement'][0]
+
+                            # construct the positions array
+                            for iY in range(int(y_points)):
+                                y = y_start + iY * y_incr
+                                for iX in range(int(x_points)):
+                                    x = x_start + iX * x_incr
+                                    pos_vals.append([x, y])
+                            pos_vals = np.array(pos_vals)
+                    else:
+                        pos_vals = np.array([1])
+                except Exception:
+                    print('PTIR file missing \'RangeX\' or \'RangeY\' attributes')
+
                 hyperspectra = pos_vals.shape[0] > 1
 
                 # ignore backgrounds and unchecked data
-                background = False
-                checked = True
-                try:
-                    checked = meas_attrs['Checked'][0]
-                    background = meas_attrs['IsBackground'][0]
-                except:
-                    print('PTIR file missing \'Checked\' or \'IsBackground\' attributes')
-                if not hyperspectra and (background or not checked):
-                    continue
+                if not hyperspectra:
+                    if meas_attrs.keys().__contains__('IsBackground') and meas_attrs['IsBackground'][0]:
+                        continue
+                    if meas_attrs.keys().__contains__('Checked') and not meas_attrs['Checked'][0]:
+                        continue
 
                 if len(wavenumbers) == 0:
-                    wavenumbers = spec_vals[0,:]
+                    wavenumbers = spec_vals
 
                 if hyperspectra:
                     x_len = meas_attrs['RangeXPoints'][0]
                     y_len = meas_attrs['RangeYPoints'][0]
-                    x_locs.append(pos_vals[:x_len,0])
-                    y_locs.append(pos_vals[:y_len,1])
+                    x_locs = pos_vals[:x_len,0]
+                    y_locs = pos_vals[:y_len,1]
                 else:
-                    x_locs.append(meas_attrs['LocationX'])
-                    y_locs.append(meas_attrs['LocationY'])
+                    x_locs.append(meas_attrs['LocationX'][0])
+                    y_locs.append(meas_attrs['LocationY'][0])
 
                 # load channels
                 for chan_name in filter(lambda s: s.startswith('Channel'), meas_keys):
