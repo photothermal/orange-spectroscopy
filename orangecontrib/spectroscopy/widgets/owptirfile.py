@@ -203,7 +203,6 @@ class OWPTIRfile(widget.OWWidget, RecentPathsWComboMixin):
                                         callback=self.select_channel,
                                         sendSelectedValue=True,)
         self.channel_combo.setFixedWidth(170)
-        self.info_channel = gui.widgetLabel(box, 'No channel selected.')
 
         self.Warning.file_too_big()
 
