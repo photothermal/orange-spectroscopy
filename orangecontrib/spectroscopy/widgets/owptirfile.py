@@ -63,7 +63,7 @@ class OWPTIRfile(widget.OWWidget, RecentPathsWComboMixin):
 
     # Overload RecentPathsWidgetMixin.recent_paths to set defaults
     recent_paths = Setting([
-        RecentPath("", "sample-datasets", "agilent/5_mosaic_agg1024.dmt"),
+        RecentPath("", "sample-datasets", "photothermal/Hyper_on_H_Treated_Sample.ptir"),
     ])
     recent_urls = Setting([])
     source = Setting(LOCAL_FILE)
@@ -277,6 +277,8 @@ class OWPTIRfile(widget.OWWidget, RecentPathsWComboMixin):
 
         with catch_warnings(record=True) as warnings:
             try:
+                if len(self.data_channels) == 0:
+                    self.load_channels()
                 self.reader.data_signal = self.get_data_signal() # must set data signal before reading
                 data = self.reader.read()
             except Exception as ex:
@@ -480,13 +482,7 @@ class OWPTIRfile(widget.OWWidget, RecentPathsWComboMixin):
         self.source = self.LOCAL_FILE
 
         self.reader = self._get_reader()
-        self.data_channels = self.reader.get_channels()
-        if len(self.data_channels) > 0:
-            # decode byte strings for labels before loading
-            for signal, label in self.data_channels.items():
-                self.data_channels[signal] = label.decode('utf-8')
-            self.load_channels()
-            self.data_channel = list(self.data_channels.values())[0]
+        self.load_channels()
 
         # load data (uses the first channel)
         self.load_data()
@@ -503,6 +499,18 @@ class OWPTIRfile(widget.OWWidget, RecentPathsWComboMixin):
             return reader
 
     def load_channels(self):
+        if self.reader is not PTIRFileReader:
+            self.reader = self._get_reader()
+
+        self.data_channels = self.reader.get_channels()
+        if len(self.data_channels) > 0:
+            # decode byte strings for labels before loading
+            for signal, label in self.data_channels.items():
+                self.data_channels[signal] = label.decode('utf-8')
+            self.load_channel_combo()
+            self.data_channel = list(self.data_channels.values())[0]
+
+    def load_channel_combo(self):
         self.channel_combo.clear()
         self.channel_combo.addItems(self.data_channels.values())
 
@@ -510,6 +518,9 @@ class OWPTIRfile(widget.OWWidget, RecentPathsWComboMixin):
         self.load_data()
 
     def get_data_signal(self):
+        if len(self.data_channels) < 1:
+            return ""
+
         for signal, label in self.data_channels.items():
             if label == self.data_channel:
                 return signal
