@@ -24,8 +24,10 @@ class NormalizeEditor(BaseEditorOrange):
     # Normalization methods
     Normalizers = [
         ("Vector Normalization", Normalize.Vector),
+        ("Min-Max Normalization", Normalize.MinMax),
         ("Area Normalization", Normalize.Area),
         ("Attribute Normalization", Normalize.Attribute),
+        ("Standard Normal Variate (SNV)", Normalize.SNV),
         ("Normalize by Reference", NORMALIZE_BY_REFERENCE)]
 
     def __init__(self, parent=None, **kwargs):
