@@ -200,8 +200,8 @@ class OWPTIRfile(widget.OWWidget, RecentPathsWComboMixin):
 
         box = gui.widgetBox(self.controlArea, "Data Channel")
         self.channel_combo = gui.comboBox(box, self, "data_channel",
-                                        callback=self.select_channel,
-                                        sendSelectedValue=True,)
+                                          callback=self.select_channel,
+                                          sendSelectedValue=True,)
         self.channel_combo.setFixedWidth(170)
 
         self.Warning.file_too_big()
