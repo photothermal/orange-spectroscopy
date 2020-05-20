@@ -88,13 +88,6 @@ class SelectColumnReader(FileFormat, SpectralFileFormat):
                               unpack=True)
         return spectrum[0], np.atleast_2d(spectrum[1]), None
 
-    @staticmethod
-    def write_file(filename, data):
-        xs = getx(data)
-        xs = xs.reshape((-1, 1))
-        table = np.hstack((xs, data.X.T))
-        np.savetxt(filename, table, delimiter="\t", fmt="%g")
-
 
 class AsciiMapReader(FileFormat):
     """ Reader ascii map files.
@@ -124,12 +117,9 @@ class AsciiMapReader(FileFormat):
     @staticmethod
     def write_file(filename, data):
         wavelengths = getx(data)
-        try:
-            ndom = Domain([data.domain["map_x"], data.domain["map_y"]] +
-                          list(data.domain.attributes))
-        except KeyError:
-            raise RuntimeError('Data needs to include meta variables '
-                               '"map_x" and "map_y"')
+        map_x = data.domain["map_x"] if "map_x" in data.domain else ContinuousVariable("map_x")
+        map_y = data.domain["map_y"] if "map_y" in data.domain else ContinuousVariable("map_y")
+        ndom = Domain([map_x, map_y] + list(data.domain.attributes))
         data = data.transform(ndom)
         with open(filename, "wb") as f:
             header = ["", ""] + [("%g" % w) for w in wavelengths]
@@ -1005,7 +995,8 @@ def build_spec_table(domvals, data, additional_table=None):
                         class_vars=additional_table.domain.class_vars,
                         metas=additional_table.domain.metas)
         ret_data = Table.from_numpy(domain, X=data, Y=additional_table.Y,
-                                    metas=additional_table.metas)
+                                    metas=additional_table.metas,
+                                    attributes=additional_table.attributes)
         return ret_data
 
 
@@ -1129,11 +1120,15 @@ class NeaReaderGSF(FileFormat, SpectralFileFormat):
 
         info = {}
         for row in parameters:
-            info.update({row[0].strip(':'): row[1:]})
+            key = row[0].strip(':')
+            value = [v for v in row[1:] if len(v)]
+            if len(value) == 1:
+                value = value[0]
+            info.update({key: value})
         
         info.update({'Reader': 'NeaReaderGSF'}) # key used in confirmation for complex fft calculation
 
-        averaging = int(info['Averaging'][1])
+        averaging = int(info['Averaging'])
         px_x = int(info['Pixel Area (X, Y, Z)'][1])
         px_y = int(info['Pixel Area (X, Y, Z)'][2])
         px_z = int(info['Pixel Area (X, Y, Z)'][3])
