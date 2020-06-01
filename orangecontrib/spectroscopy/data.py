@@ -1305,7 +1305,8 @@ class PTIRFileReader(FileFormat, SpectralFileFormat):
                 x_len = meas_attrs['RangeXPoints'][0]
                 y_len = meas_attrs['RangeYPoints'][0]
                 x_locs = pos_vals[:x_len,0]
-                y_locs = pos_vals[:y_len,1]
+                y_indices = np.round(np.linspace(0, pos_vals.shape[0] - 1, y_len)).astype(int)
+                y_locs = pos_vals[y_indices,1]
             else:
                 x_locs.append(meas_attrs['LocationX'][0])
                 y_locs.append(meas_attrs['LocationY'][0])
