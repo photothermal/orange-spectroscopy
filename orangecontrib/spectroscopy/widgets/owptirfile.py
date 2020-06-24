@@ -33,13 +33,13 @@ from orangecontrib.spectroscopy.data import PTIRFileReader
 log = logging.getLogger(__name__)
 
 
-class OWPTIRfile(widget.OWWidget, RecentPathsWComboMixin):
+class OWPTIRFile(widget.OWWidget, RecentPathsWComboMixin):
     name = "PTIR File"
     id = "orangecontrib.spectroscopy.widgets.ptirfile"
     icon = "icons/ptirfile.svg"
     description = "Read data from PTIR Studio files."
     priority = 10000
-    replaces = ["orangecontrib.protospec.widgets.owptirfile.OWPTIRfile"]
+    replaces = ["orangecontrib.protospec.widgets.owptirfile.OWPTIRFile"]
 
     class Outputs:
         data = Output("Data", Table,
@@ -530,7 +530,7 @@ class OWPTIRfile(widget.OWWidget, RecentPathsWComboMixin):
 if __name__ == "__main__":
     import sys
     a = QApplication(sys.argv)
-    ow = OWPTIRfile()
+    ow = OWPTIRFile()
     ow.show()
     a.exec_()
     ow.saveSettings()
