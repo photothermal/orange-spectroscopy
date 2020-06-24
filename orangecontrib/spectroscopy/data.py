@@ -1209,13 +1209,11 @@ class PTIRFileReader(FileFormat, SpectralFileFormat):
         for meas_name in filter(lambda s: s.startswith('Measurement'), keys):
             hdf5_meas = hdf5_file[meas_name]
             meas_keys = list(hdf5_meas.keys())
+            meas_attrs = hdf5_meas.attrs
 
             # skip background measurements
-            try:
-                if hdf5_meas.attrs['IsBackground'][0]:
-                    continue
-            except:
-                print('PTIR file missing \'IsBackground\' attribute')
+            if meas_attrs.keys().__contains__('IsBackground') and meas_attrs['IsBackground'][0]:
+                continue
 
             for chan_name in filter(lambda s: s.startswith('Channel'), meas_keys):
                 hdf5_chan = hdf5_meas[chan_name]
@@ -1272,16 +1270,20 @@ class PTIRFileReader(FileFormat, SpectralFileFormat):
                     x_start = meas_attrs['RangeXStart'][0]
                     x_points = meas_attrs['RangeXPoints'][0]
                     x_incr = meas_attrs['RangeXIncrement'][0]
+                    x_end = x_start + x_incr * (x_points - 1)
+                    x_min = min(x_start, x_end)
                     if meas_attrs.keys().__contains__('RangeYStart'):
                         y_start = meas_attrs['RangeYStart'][0]
                         y_points = meas_attrs['RangeYPoints'][0]
                         y_incr = meas_attrs['RangeYIncrement'][0]
+                        y_end = y_start + y_incr * (y_points - 1)
+                        y_min = min(y_start, y_end)
 
                         # construct the positions array
                         for iY in range(int(y_points)):
-                            y = y_start + iY * y_incr
+                            y = y_min + iY * abs(y_incr)
                             for iX in range(int(x_points)):
-                                x = x_start + iX * x_incr
+                                x = x_min + iX * abs(x_incr)
                                 pos_vals.append([x, y])
                         pos_vals = np.array(pos_vals)
                 else:
