@@ -1205,7 +1205,7 @@ class PTIRFileReader(FileFormat, SpectralFileFormat):
         keys = list(hdf5_file.keys())
 
         # map all unique data channels
-        channelMap = {}
+        channel_map = {}
         for meas_name in filter(lambda s: s.startswith('Measurement'), keys):
             hdf5_meas = hdf5_file[meas_name]
             meas_keys = list(hdf5_meas.keys())
@@ -1217,11 +1217,16 @@ class PTIRFileReader(FileFormat, SpectralFileFormat):
 
             for chan_name in filter(lambda s: s.startswith('Channel'), meas_keys):
                 hdf5_chan = hdf5_meas[chan_name]
-                signal = hdf5_chan.attrs['DataSignal']
-                if not channelMap.keys().__contains__(signal):
-                    label = hdf5_chan.attrs['Label']
-                    channelMap[signal] = label
-        return channelMap
+                try:
+                    signal = hdf5_chan.attrs['DataSignal']
+                    if not channel_map.keys().__contains__(signal):
+                        label = hdf5_chan.attrs['Label']
+                        channel_map[signal] = label
+                except:
+                    pass
+        if len(channel_map) == 0:
+            raise IOError("Error reading channels from " + self.filename)
+        return channel_map
 
     def read_spectra(self):
         if self.data_signal == '':
@@ -1231,6 +1236,7 @@ class PTIRFileReader(FileFormat, SpectralFileFormat):
         hdf5_file = h5py.File(self.filename,'r')
         keys = list(hdf5_file.keys())
 
+        hyperspectra = False
         intensities = []
         wavenumbers = []
         x_locs = []
@@ -1262,7 +1268,7 @@ class PTIRFileReader(FileFormat, SpectralFileFormat):
                     wn_points = meas_attrs['RangeWavenumberPoints'][0]
                     spec_vals = np.linspace(wn_start, wn_end, wn_points)
             except:
-                print('PTIR file missing \'RangeWavenumber\' attributes')
+                raise IOError("Error reading wavenumber range from " + self.filename)
 
             pos_vals = []
             try:
@@ -1288,8 +1294,8 @@ class PTIRFileReader(FileFormat, SpectralFileFormat):
                         pos_vals = np.array(pos_vals)
                 else:
                     pos_vals = np.array([1])
-            except Exception:
-                print('PTIR file missing \'RangeX\' or \'RangeY\' attributes')
+            except:
+                raise IOError("Error reading position data from " + self.filename)
 
             hyperspectra = pos_vals.shape[0] > 1
 
