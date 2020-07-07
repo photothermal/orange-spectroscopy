@@ -75,7 +75,7 @@ class OWPTIRFile(widget.OWWidget, RecentPathsWComboMixin):
 
     domain_editor = SettingProvider(DomainEditor)
 
-    data_channel = ContextSetting("")
+    data_channel = Setting("")
     data_channels = {}
 
     class Warning(widget.OWWidget.Warning):
@@ -277,7 +277,8 @@ class OWPTIRFile(widget.OWWidget, RecentPathsWComboMixin):
 
         with catch_warnings(record=True) as warnings:
             try:
-                if len(self.data_channels) == 0:
+                # reload the channels if the file changed
+                if self.loaded_file != self.last_path():
                     self.load_channels()
                 self.reader.data_signal = self.get_data_signal() # must set data signal before reading
                 data = self.reader.read()
