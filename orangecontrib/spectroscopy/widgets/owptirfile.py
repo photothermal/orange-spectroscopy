@@ -277,8 +277,7 @@ class OWPTIRFile(widget.OWWidget, RecentPathsWComboMixin):
 
         with catch_warnings(record=True) as warnings:
             try:
-                # reload the channels if the file changed
-                if self.loaded_file != self.last_path():
+                if len(self.data_channels) == 0 or self.loaded_file != self.last_path():
                     self.load_channels()
                 self.reader.data_signal = self.get_data_signal() # must set data signal before reading
                 data = self.reader.read()
@@ -481,9 +480,6 @@ class OWPTIRFile(widget.OWWidget, RecentPathsWComboMixin):
         self.recent_paths[0].file_format = reader.qualified_name()
 
         self.source = self.LOCAL_FILE
-
-        self.reader = self._get_reader()
-        self.load_channels()
 
         # load data (uses the first channel)
         self.load_data()
