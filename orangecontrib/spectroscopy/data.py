@@ -1344,7 +1344,19 @@ class PTIRFileReader(FileFormat, SpectralFileFormat):
         if hyperspectra:
             return _spectra_from_image(intensities, features, x_locs, y_locs)
         else:
-            return features, intensities
+            spectra = intensities
+
+            # locations
+            x_loc = y_loc = np.arange(spectra.shape[0])
+            metas = np.array([x_locs[x_loc], y_locs[y_loc]]).T
+
+            domain = Orange.data.Domain([], None,
+                                        metas=[Orange.data.ContinuousVariable.make("map_x"),
+                                               Orange.data.ContinuousVariable.make("map_y")]
+                                        )
+            data = Orange.data.Table.from_numpy(domain, X=np.zeros((len(spectra), 0)),
+                                                metas=np.asarray(metas, dtype=object))
+            return features, spectra, data
 
 
 class TileFileFormat:
