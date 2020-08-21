@@ -204,7 +204,7 @@ class OWPTIRFile(widget.OWWidget, RecentPathsWComboMixin):
                                           sendSelectedValue=True,)
         self.channel_combo.setFixedWidth(170)
 
-        self.Warning.file_too_big()
+        self.load_data()
 
     ### owfile methods code-copy ###
     @staticmethod
