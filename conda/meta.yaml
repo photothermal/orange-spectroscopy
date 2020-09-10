@@ -23,7 +23,7 @@ requirements:
     - recommonmark
   run:
     - python
-    - orange3 >=3.24
+    - orange3 >=3.25
     - scipy >=0.14.0
     - spectral >=0.18
     - serverfiles >=0.2
@@ -32,6 +32,7 @@ requirements:
     - colorcet
     - h5py
     - extranormal3 >=0.0.3
+    - renishawWiRE >=0.1.8
 
 test:
   imports:
