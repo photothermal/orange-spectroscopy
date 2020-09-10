@@ -6,7 +6,7 @@ from Orange.widgets.tests.base import WidgetTest
 from orangecontrib.spectroscopy.widgets.owptirfile import OWPTIRFile
 from orangecontrib.spectroscopy import get_sample_datasets_dir
 
-PHOTOTHERMAL_HYPER = "photothermal/Hyper_on_H_Treated_Sample.ptir"
+PHOTOTHERMAL_HYPER = "photothermal/Hyper_Sample.ptir"
 PHOTOTHERMAL_ARRAY = "photothermal/Nodax_Spectral_Array.ptir"
 
 
