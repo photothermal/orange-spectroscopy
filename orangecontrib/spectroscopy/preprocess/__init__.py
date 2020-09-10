@@ -327,7 +327,7 @@ class _NormalizeCommon(CommonDomain):
         elif self.method == Normalize.MinMax:
             min = np.nanmin(data.X, axis=1, keepdims=True)
             max = np.nanmax(data.X, axis=1, keepdims=True)
-            data.X = (data.X - min) / (max - min)
+            data.X = (data.X) / (max - min)
             replace_infs(data.X)
         return data.X
 
@@ -379,6 +379,26 @@ class NormalizeReference(Preprocess):
         domain = Orange.data.Domain(atts, data.domain.class_vars,
                                     data.domain.metas)
         return data.transform(domain)
+
+class _NormalizePhaseReferenceCommon(CommonDomainRef):
+
+    def transformed(self, data):
+        if len(data):
+            ref_X = self.interpolate_extend_to(self.reference, getx(data))
+            return replace_infs(np.angle(np.exp(data.X * 1j) / np.exp(ref_X * 1j)))
+        else:
+            return data
+
+class NormalizePhaseReference(NormalizeReference):
+
+    def __call__(self, data):
+        common = _NormalizePhaseReferenceCommon(self.reference, data.domain)
+        atts = [a.copy(compute_value=NormalizeFeature(i, common))
+                for i, a in enumerate(data.domain.attributes)]
+        domain = Orange.data.Domain(atts, data.domain.class_vars,
+                                    data.domain.metas)
+        return data.transform(domain)
+
 
 
 def features_with_interpolation(points, kind="linear", domain=None, handle_nans=True, interpfn=None):

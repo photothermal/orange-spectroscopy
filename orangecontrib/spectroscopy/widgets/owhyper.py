@@ -1,5 +1,7 @@
 import collections.abc
+from collections import OrderedDict
 from xml.sax.saxutils import escape
+import io
 
 from AnyQt.QtWidgets import QWidget, QPushButton, \
     QGridLayout, QFormLayout, QAction, QVBoxLayout, QWidgetAction, QSplitter, \
@@ -16,6 +18,7 @@ import numpy as np
 import pyqtgraph as pg
 from pyqtgraph import GraphicsWidget
 import colorcet
+from PIL import Image
 
 import Orange.data
 from Orange.data import Domain
@@ -23,7 +26,7 @@ from Orange.widgets.widget import OWWidget, Msg, OWComponent, Input, Output
 from Orange.widgets import gui
 from Orange.widgets.settings import \
     Setting, ContextSetting, DomainContextHandler, SettingProvider
-from Orange.widgets.utils.itemmodels import DomainModel
+from Orange.widgets.utils.itemmodels import DomainModel, PyListModel
 from Orange.widgets.utils import saveplot
 from Orange.data import DiscreteVariable, ContinuousVariable
 from Orange.widgets.utils.concurrent import TaskState, ConcurrentMixin
@@ -123,6 +126,16 @@ def get_levels(img):
         mn = 0
         mx = 255
     return [mn, mx]
+
+
+class VisibleImageListModel(PyListModel):
+
+    def data(self, index, role=Qt.DisplayRole):
+        if self._is_index_valid(index):
+            img = self[index.row()]
+            if role == Qt.DisplayRole:
+                return img["name"]
+        return PyListModel.data(self, index, role)
 
 
 class ImageItemNan(pg.ImageItem):
@@ -253,6 +266,9 @@ class ImageColorSettingMixin:
     show_legend = Setting(True)
     palette_index = Setting(0)
 
+    def __init__(self):
+        self.fixed_levels = None  # fixed level settings for categoric data
+
     def color_settings_box(self):
         box = gui.vBox(self)
         self.color_cb = gui.comboBox(box, self, "palette_index", label="Color:",
@@ -287,11 +303,11 @@ class ImageColorSettingMixin:
         self._level_high_le.validator().setDefault(1)
         form.addRow("High limit:", self._level_high_le)
 
-        lowslider = gui.hSlider(
+        self._threshold_low_slider = lowslider = gui.hSlider(
             box, self, "threshold_low", minValue=0.0, maxValue=1.0,
             step=0.05, ticks=True, intOnly=False,
             createLabel=False, callback=self.update_levels)
-        highslider = gui.hSlider(
+        self._threshold_high_slider = highslider = gui.hSlider(
             box, self, "threshold_high", minValue=0.0, maxValue=1.0,
             step=0.05, ticks=True, intOnly=False,
             createLabel=False, callback=self.update_levels)
@@ -305,20 +321,18 @@ class ImageColorSettingMixin:
         return box
 
     def update_legend_visible(self):
-        self.legend.setVisible(self.show_legend)
+        if self.fixed_levels is not None:
+            self.legend.setVisible(False)
+        else:
+            self.legend.setVisible(self.show_legend)
 
     def update_levels(self):
         if not self.data:
             return
 
-        if not self.threshold_low < self.threshold_high:
-            # TODO this belongs here, not in the parent
-            self.parent.Warning.threshold_error()
-            return
-        else:
-            self.parent.Warning.threshold_error.clear()
-
-        if self.img.image is not None:
+        if self.fixed_levels is not None:
+            levels = list(self.fixed_levels)
+        elif self.img.image is not None:
             levels = get_levels(self.img.image)
         else:
             levels = [0, 255]
@@ -333,6 +347,23 @@ class ImageColorSettingMixin:
 
         self._level_low_le.setPlaceholderText(rounded_levels[0])
         self._level_high_le.setPlaceholderText(rounded_levels[1])
+
+        enabled_level_settings = self.fixed_levels is None
+        self._level_low_le.setEnabled(enabled_level_settings)
+        self._level_high_le.setEnabled(enabled_level_settings)
+        self._threshold_low_slider.setEnabled(enabled_level_settings)
+        self._threshold_high_slider.setEnabled(enabled_level_settings)
+
+        if self.fixed_levels is not None:
+            self.img.setLevels(self.fixed_levels)
+            return
+
+        if not self.threshold_low < self.threshold_high:
+            # TODO this belongs here, not in the parent
+            self.parent.Warning.threshold_error()
+            return
+        else:
+            self.parent.Warning.threshold_error.clear()
 
         ll = float(self.level_low) if self.level_low is not None else levels[0]
         lh = float(self.level_high) if self.level_high is not None else levels[1]
@@ -491,6 +522,8 @@ class ImagePlot(QWidget, OWComponent, SelectionGroupMixin,
         self.img = ImageItemNan()
         self.img.setOpts(axisOrder='row-major')
         self.plot.addItem(self.img)
+        self.vis_img = pg.ImageItem()
+        self.vis_img.setOpts(axisOrder='row-major')
         self.plot.vb.setAspectLocked()
         self.plot.scene().sigMouseMoved.connect(self.plot.vb.mouseMovedEvent)
 
@@ -689,13 +722,32 @@ class ImagePlot(QWidget, OWComponent, SelectionGroupMixin,
 
         if self.data and self.attr_x and self.attr_y:
             self.start(self.compute_image, self.data, self.attr_x, self.attr_y,
-                       self.parent.integrate_fn())
+                       self.parent.image_values(),
+                       self.parent.image_values_fixed_levels())
         else:
             self.image_updated.emit()
 
+    def set_visible_image(self, img: np.ndarray, rect: QRectF):
+        self.vis_img.setImage(img)
+        self.vis_img.setRect(rect)
+
+    def show_visible_image(self):
+        if self.vis_img not in self.plot.items:
+            self.plot.addItem(self.vis_img)
+
+    def hide_visible_image(self):
+        self.plot.removeItem(self.vis_img)
+
+    def set_visible_image_opacity(self, opacity: int):
+        """Opacity is an alpha channel intensity integer from 0 to 255"""
+        self.vis_img.setOpacity(opacity / 255)
+
+    def set_visible_image_comp_mode(self, comp_mode: QPainter.CompositionMode):
+        self.vis_img.setCompositionMode(comp_mode)
+
     @staticmethod
     def compute_image(data: Orange.data.Table, attr_x, attr_y,
-                      integrate_fn, state: TaskState):
+                      image_values, image_values_fixed_levels, state: TaskState):
 
         def progress_interrupt(i: float):
             if state.is_interruption_requested():
@@ -708,24 +760,29 @@ class ImagePlot(QWidget, OWComponent, SelectionGroupMixin,
         xat = data.domain[attr_x]
         yat = data.domain[attr_y]
 
-        ndom = Domain([xat, yat])
-        datam = data.transform(ndom)
+        def extract_col(data, var):
+            nd = Domain([var])
+            d = data.transform(nd)
+            return d.X[:, 0]
+
         progress_interrupt(0)
-        res.coorx = datam.X[:, 0]
-        res.coory = datam.X[:, 1]
-        res.data_points = datam.X
+
+        res.coorx = extract_col(data, xat)
+        res.coory = extract_col(data, yat)
+        res.data_points = np.hstack([res.coorx.reshape(-1, 1), res.coory.reshape(-1, 1)])
         res.lsx = lsx = values_to_linspace(res.coorx)
         res.lsy = lsy = values_to_linspace(res.coory)
+        res.image_values_fixed_levels = image_values_fixed_levels
         progress_interrupt(0)
 
         if lsx[-1] * lsy[-1] > IMAGE_TOO_BIG:
             raise ImageTooBigException((lsx[-1], lsy[-1]))
 
-        # the code bellow does this, but part-wise:
-        # d = integrate_fn(data).X[:, 0]
+        # the code below does this, but part-wise:
+        # d = image_values(data).X[:, 0]
         parts = []
         for slice in split_to_size(len(data), 10000):
-            part = integrate_fn(data[slice]).X[:, 0]
+            part = image_values(data[slice]).X[:, 0]
             parts.append(part)
             progress_interrupt(0)
         d = np.concatenate(parts)
@@ -741,6 +798,8 @@ class ImagePlot(QWidget, OWComponent, SelectionGroupMixin,
         lsx, lsy = self.lsx, self.lsy
 
         d = res.d
+
+        self.fixed_levels = res.image_values_fixed_levels
 
         self.data_points = res.data_points
 
@@ -759,6 +818,7 @@ class ImagePlot(QWidget, OWComponent, SelectionGroupMixin,
         self.img.setImage(imdata, autoLevels=False)
         self.update_levels()
         self.update_color_schema()
+        self.update_legend_visible()
 
         # shift centres of the pixels so that the axes are useful
         shiftx = _shift(lsx)
@@ -803,6 +863,7 @@ class OWHyper(OWWidget):
     icon = "icons/hyper.svg"
     priority = 20
     replaces = ["orangecontrib.infrared.widgets.owhyper.OWHyper"]
+    keywords = ["image", "spectral", "chemical", "imaging"]
 
     settings_version = 4
     settingsHandler = DomainContextHandler()
@@ -814,6 +875,11 @@ class OWHyper(OWWidget):
     integration_methods = Integrate.INTEGRALS
     value_type = Setting(0)
     attr_value = ContextSetting(None)
+
+    show_visible_image = Setting(False)
+    visible_image_name = Setting(None)
+    visible_image_composition = Setting('Normal')
+    visible_image_opacity = Setting(120)
 
     lowlim = Setting(None)
     highlim = Setting(None)
@@ -888,6 +954,11 @@ class OWHyper(OWWidget):
         self.imageplot = ImagePlot(self)
         self.imageplot.selection_changed.connect(self.output_image_selection)
 
+        # do not save visible image (a complex structure as a setting;
+        # only save its name)
+        self.visible_image = None
+        self.setup_visible_image_controls()
+
         self.curveplot = CurvePlotHyper(self, select=SELECTONE)
         self.curveplot.selection_changed.connect(self.redraw_integral_info)
         self.curveplot.plot.vb.x_padding = 0.005  # pad view so that lines are not hidden
@@ -917,11 +988,60 @@ class OWHyper(OWWidget):
         # prepare interface according to the new context
         self.contextAboutToBeOpened.connect(lambda x: self.init_interface_data(x[0]))
 
+    def setup_visible_image_controls(self):
+        self.visbox = gui.widgetBox(self.controlArea, True)
+
+        gui.checkBox(
+            self.visbox, self, 'show_visible_image',
+            label='Show visible image',
+            callback=lambda: (self.update_visible_image_interface(), self.update_visible_image()))
+
+        self.visible_image_model = VisibleImageListModel()
+        gui.comboBox(
+            self.visbox, self, 'visible_image',
+            model=self.visible_image_model,
+            callback=self.update_visible_image)
+
+        self.visual_image_composition_modes = OrderedDict([
+            ('Normal', QPainter.CompositionMode_Source),
+            ('Overlay', QPainter.CompositionMode_Overlay),
+            ('Multiply', QPainter.CompositionMode_Multiply),
+            ('Difference', QPainter.CompositionMode_Difference)
+        ])
+        gui.comboBox(
+            self.visbox, self, 'visible_image_composition', label='Composition mode:',
+            model=PyListModel(self.visual_image_composition_modes.keys()),
+            callback=self.update_visible_image_composition_mode
+        )
+
+        gui.hSlider(
+            self.visbox, self, 'visible_image_opacity', label='Opacity:',
+            minValue=0, maxValue=255, step=10, createLabel=False,
+            callback=self.update_visible_image_opacity
+        )
+
+        self.update_visible_image_interface()
+        self.update_visible_image_composition_mode()
+        self.update_visible_image_opacity()
+
+    def update_visible_image_interface(self):
+        controlled = ['visible_image', 'visible_image_composition', 'visible_image_opacity']
+        for c in controlled:
+            getattr(self.controls, c).setEnabled(self.show_visible_image)
+
+    def update_visible_image_composition_mode(self):
+        self.imageplot.set_visible_image_comp_mode(
+            self.visual_image_composition_modes[self.visible_image_composition])
+
+    def update_visible_image_opacity(self):
+        self.imageplot.set_visible_image_opacity(self.visible_image_opacity)
+
     def init_interface_data(self, data):
         same_domain = (self.data and data and
                        data.domain == self.data.domain)
         if not same_domain:
             self.init_attr_values(data)
+        self.init_visible_images(data)
 
     def output_image_selection(self):
         if not self.data:
@@ -947,9 +1067,32 @@ class OWHyper(OWWidget):
         self.feature_value_model.set_domain(domain)
         self.attr_value = self.feature_value_model[0] if self.feature_value_model else None
 
+    def init_visible_images(self, data):
+        self.visible_image_model.clear()
+        if data is not None and 'visible_images' in data.attributes:
+            self.visbox.setEnabled(True)
+            for img in data.attributes['visible_images']:
+                self.visible_image_model.append(img)
+        else:
+            self.visbox.setEnabled(False)
+            self.show_visible_image = False
+        self.update_visible_image_interface()
+        self._choose_visible_image()
+        self.update_visible_image()
+
+    def _choose_visible_image(self):
+        # choose an image according to visible_image_name setting
+        if len(self.visible_image_model):
+            for img in self.visible_image_model:
+                if img["name"] == self.visible_image_name:
+                    self.visible_image = img
+                    break
+            else:
+                self.visible_image = self.visible_image_model[0]
+
     def redraw_integral_info(self):
         di = {}
-        integrate = self.integrate_fn()
+        integrate = self.image_values()
         if isinstance(integrate, Integrate) and np.any(self.curveplot.selection_group):
             # curveplot can have a subset of curves on the input> match IDs
             ind = np.flatnonzero(self.curveplot.selection_group)[0]
@@ -963,7 +1106,7 @@ class OWHyper(OWWidget):
     def refresh_markings(self, di):
         refresh_integral_markings([{"draw": di}], self.markings_integral, self.curveplot)
 
-    def integrate_fn(self):
+    def image_values(self):
         if self.value_type == 0:  # integrals
             imethod = self.integration_methods[self.integration_method]
 
@@ -976,6 +1119,12 @@ class OWHyper(OWWidget):
         else:
             return lambda data, attr=self.attr_value: \
                 data.transform(Domain([data.domain[attr]]))
+
+    def image_values_fixed_levels(self):
+        if self.value_type == 0:  # integrals
+            return None
+        else:
+            return 0, len(self.attr_value.values) - 1
 
     def redraw_data(self):
         self.redraw_integral_info()
@@ -1036,6 +1185,7 @@ class OWHyper(OWWidget):
         self._init_integral_boundaries()
         self.imageplot.update_view()
         self.output_image_selection()
+        self.update_visible_image()
 
     def _init_integral_boundaries(self):
         # requires data in curveplot
@@ -1071,6 +1221,24 @@ class OWHyper(OWWidget):
         self.curveplot.shutdown()
         self.imageplot.shutdown()
         super().onDeleteWidget()
+
+    def update_visible_image(self):
+        img_info = self.visible_image
+        if self.show_visible_image and img_info is not None:
+            self.visible_image_name = img_info["name"]  # save visual image name
+            img = Image.open(io.BytesIO(img_info['image_bytes'])).convert('RGBA')
+            # image must be vertically flipped
+            # https://github.com/pyqtgraph/pyqtgraph/issues/315#issuecomment-214042453
+            # Behavior may change at pyqtgraph 1.0 version
+            img = np.array(img)[::-1]
+            rect = QRectF(img_info['pos_x'],
+                          img_info['pos_y'],
+                          img.shape[1] * img_info['pixel_size_x'],
+                          img.shape[0] * img_info['pixel_size_y'])
+            self.imageplot.set_visible_image(img, rect)
+            self.imageplot.show_visible_image()
+        else:
+            self.imageplot.hide_visible_image()
 
 
 if __name__ == "__main__":  # pragma: no cover
