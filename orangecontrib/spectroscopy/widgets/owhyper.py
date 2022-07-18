@@ -52,7 +52,6 @@ from orangecontrib.spectroscopy.widgets.gui import MovableVline, lineEditDecimal
 from orangecontrib.spectroscopy.widgets.line_geometry import in_polygon, intersect_line_segments
 from orangecontrib.spectroscopy.widgets.utils import \
     SelectionGroupMixin, SelectionOutputsMixin
-from pyqtgraph.functions import mkBrush
 
 IMAGE_TOO_BIG = 1024*1024*100
 
@@ -260,7 +259,7 @@ vector_colour = [
     ("Blue", {0: (0,0,255)}),
     ("Cyan", {0: (0,255,255)}),
     ("Magenta", {0: (255,0,255)}),
-    ("Yellow", {0: (255,255,0)}),    
+    ("Yellow", {0: (255,255,0)}),
 ]
 
 def palette_gradient(colors):
@@ -1001,7 +1000,7 @@ class BasicImagePlot(QWidget, OWComponent, SelectionGroupMixin,
 
     def set_vector_co(self, pen):
         self.c.setPen(pen)
-    
+
     def set_vector_scale(self, scale):
         th = self.v[:,0]
         v_mag = self.v[:,1]
@@ -1018,11 +1017,12 @@ class BasicImagePlot(QWidget, OWComponent, SelectionGroupMixin,
         ycurve[0::2], ycurve[1::2] = y - dispy, y + dispy
         connect = np.ones((dispx.shape[0]*2))
         connect[1::2] = 0
-        self.c.setData(x=xcurve, y=ycurve, connect=connect) 
+        self.c.setData(x=xcurve, y=ycurve, connect=connect)
 
     @staticmethod
     def compute_image(data: Orange.data.Table, attr_x, attr_y,
-                      vector_values, image_values, image_values_fixed_levels, choose, state: TaskState):
+                      vector_values, image_values, image_values_fixed_levels, choose,
+                      state: TaskState):
 
         if data is None or attr_x is None or attr_y is None:
             raise UndefinedImageException
@@ -1301,7 +1301,7 @@ class OWHyper(OWWidget, SelectionOutputsMixin):
         # only save its name)
         self.visible_image = None
         self.setup_visible_image_controls()
-        
+
         self.curveplot = CurvePlotHyper(self, select=SELECTONE)
         self.curveplot.selection_changed.connect(self.redraw_integral_info)
         self.curveplot.plot.vb.x_padding = 0.005  # pad view so that lines are not hidden
@@ -1410,7 +1410,7 @@ class OWHyper(OWWidget, SelectionOutputsMixin):
     def init_interface_data(self, data):
         self.init_attr_values(data)
         self.init_visible_images(data)
-        self.init_vector_plot(data)        
+        self.init_vector_plot(data)
 
     def output_image_selection(self):
         _, selected = self.send_selection(self.data, self.imageplot.selection_group)
