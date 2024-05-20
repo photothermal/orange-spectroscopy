@@ -1311,6 +1311,7 @@ class OWHyper(OWWidget, SelectionOutputsMixin):
         iabox.layout().addWidget(self.imageplot.axes_settings_box)
         icbox.layout().addWidget(self.imageplot.color_settings_box)
 
+        self.data = None
         self.setup_vector_plot_controls()
 
         # do not save visible image (a complex structure as a setting;
@@ -1354,7 +1355,6 @@ class OWHyper(OWWidget, SelectionOutputsMixin):
 
         self.markings_integral = []
 
-        self.data = None
         self.disable_integral_range = False
 
         self.resize(900, 700)
