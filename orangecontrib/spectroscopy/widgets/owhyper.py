@@ -1576,7 +1576,7 @@ class OWHyper(OWWidget, SelectionOutputsMixin):
         if self.vector_colour_index == 8:
             self.v_colour_byval.setEnabled(True)
             self.v_colour_byval_select.setEnabled(True)
-            if self.vcol_byval_feat is not None:
+            if self.vcol_byval_feat is not None and self.show_vector_plot:
                 self.imageplot.vect_legend.setVisible(True)
                 self.imageplot.vect_legend.adapt_to_size()
             else:
@@ -1602,6 +1602,7 @@ class OWHyper(OWWidget, SelectionOutputsMixin):
         fmin, fmax = np.min(feat), np.max(feat)
         self.imageplot.vect_legend.set_range(fmin, fmax)
         self.imageplot.vect_legend.set_colors(_color_palettes[self.vcol_byval_index][1][0])
+        self.imageplot.vect_legend.setVisible(True)
         self.imageplot.vect_legend.adapt_to_size()
 
     def get_vector_data(self):
@@ -1726,6 +1727,7 @@ class OWHyper(OWWidget, SelectionOutputsMixin):
     def init_vector_plot(self, data):
         domain = data.domain if data is not None else None
         self.vector_opts.set_domain(domain)
+        self.vector_cbyf_opts.set_domain(domain)
 
         # initialize values so that the combo boxes are not in invalid states
         if self.vector_opts:
