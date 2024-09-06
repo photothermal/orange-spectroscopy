@@ -4,7 +4,7 @@ import numpy as np
 from AnyQt.QtWidgets import QGridLayout, QApplication
 
 import Orange.data
-from Orange.data import ContinuousVariable, Domain
+from Orange.data import ContinuousVariable, Domain, Table
 from Orange.widgets.widget import OWWidget, Input, Output, Msg
 from Orange.widgets import gui, settings
 
@@ -110,6 +110,7 @@ class OWFFT(OWWidget):
         self.reader = None
         if self.dx_HeNe is True:
             self.dx = 1.0 / self.laser_wavenumber / 2.0
+        self.use_polar_FFT = False
 
         layout = QGridLayout()
         layout.setContentsMargins(0, 0, 0, 0)
@@ -353,7 +354,10 @@ class OWFFT(OWWidget):
     @gui.deferred
     def commit(self):
         if self.data is not None:
-            self.calculateFFT()
+            if self.use_polar_FFT:
+                self.calculate_polar_FFT()
+            else:
+                self.calculateFFT()
 
     def calculateFFT(self):
         """
@@ -517,6 +521,55 @@ class OWFFT(OWWidget):
         self.Outputs.spectra.send(self.spectra_table)
         self.Outputs.phases.send(self.phases_table)
 
+    def calculate_polar_FFT(self):
+        # polar channel data comes in alternating channel pairs
+        # of amplitude and phase data for the same channel for each run
+        amplitude_in = self.data.X[::2]
+        phases_in = self.data.X[1::2]
+        ifg_data = amplitude_in * np.exp(phases_in * 1j)
+
+        wavenumbers = None
+        spectra = []
+        phases = []
+
+        # Reset info, error and warning dialogs
+        self.Error.clear()
+        self.Warning.clear()
+
+        fft_single = irfft.ComplexFFT(
+            dx=self.dx,
+            apod_func=self.apod_func,
+            zff=2**self.zff,
+            phase_res=self.phase_resolution if self.phase_res_limit else None,
+            phase_corr=self.phase_corr,
+            peak_search=self.peak_search,
+        )
+        for row in ifg_data:
+            spectrum_out, phase_out, wavenumbers = fft_single(row, zpd=None)
+            spectra.append(spectrum_out)
+            phases.append(phase_out)
+
+        spectra = np.vstack(spectra)
+        phases = np.vstack(phases)
+
+        if self.limit_output is True:
+            wavenumbers, spectra = self.limit_range(wavenumbers, spectra)
+            _, phases = self.limit_range(wavenumbers, phases)
+
+        wavenumbers_domain = Domain(
+            [ContinuousVariable.make(f"{w}") for w in wavenumbers],
+            metas=self.data.domain.metas,
+        )
+        self.spectra_table = Table.from_numpy(
+            wavenumbers_domain, X=spectra, metas=self.data.metas[::2]
+        )
+        phases_table = Table.from_numpy(
+            wavenumbers_domain, X=phases, metas=self.data.metas[1::2]
+        )
+
+        self.Outputs.spectra.send(self.spectra_table)
+        self.Outputs.phases.send(phases_table)
+
     def determine_sweeps(self):
         """
         Determine if input interferogram is single-sweep or
@@ -561,8 +614,7 @@ class OWFFT(OWWidget):
             self.sweeps = 2
 
     def check_metadata(self):
-        """ Look for laser wavenumber and sampling interval metadata """
-
+        """Look for laser wavenumber and sampling interval metadata"""
         try:
             self.reader = self.data.attributes['Reader']
         except KeyError:
@@ -592,6 +644,44 @@ class OWFFT(OWWidget):
 
             self.infoc.setText(f"Using an automatic datapoint spacing (Δx).\nΔx:\t{self.dx:.8} cm\nApplying Complex Fourier Transform.")
             return
+
+        try:
+            channel_data, detail = self.data.attributes["Channel Data Type"]
+            if channel_data == "Polar":
+                self.use_polar_FFT = True
+                self.infoc.setText(
+                    f"Channel data type: {channel_data} ({detail}).\n"
+                    + "Applying Complex Fourier Transform."
+                )
+        except KeyError:
+            pass
+        try:
+            domain_units, dx = self.data.attributes["Calculated Datapoint Spacing (Δx)"]
+            if domain_units != "[cm]" or not dx:
+                raise KeyError
+            
+            self.dx = dx
+            self.zff = 2
+            self.dx_HeNe = False
+            self.dx_HeNe_cb.setDisabled(True)
+            self.dx_edit.setDisabled(True)
+            self.controls.auto_sweeps.setDisabled(True)
+            self.controls.sweeps.setDisabled(True)
+            self.controls.peak_search.setEnabled(True)
+            self.controls.zpd1.setDisabled(True)
+            self.controls.zpd2.setDisabled(True)
+            self.controls.phase_corr.setDisabled(True)
+            self.controls.phase_res_limit.setDisabled(True)
+            self.controls.phase_resolution.setDisabled(True)
+
+            self.infoc.setText(
+                self.infoc.text()
+                + "\n"
+                + "Using Calculated Datapoint Spacing (Δx) from metadata."
+            )
+            return
+        except KeyError:
+            pass
 
         try:
             lwn = self.data.get_column("Effective Laser Wavenumber")
