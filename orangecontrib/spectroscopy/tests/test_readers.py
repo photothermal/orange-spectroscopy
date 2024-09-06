@@ -9,7 +9,7 @@ from Orange.data.io import FileFormat
 from Orange.tests import named_file
 from Orange.widgets.data.owfile import OWFile
 from orangecontrib.spectroscopy.data import getx, build_spec_table
-from orangecontrib.spectroscopy.io.neaspec import NeaReader, NeaReaderGSF
+from orangecontrib.spectroscopy.io.neaspec import NeaReader, NeaReaderGSF, NeaReaderMultiChannel
 from orangecontrib.spectroscopy.io.util import ConstantBytesVisibleImage
 from orangecontrib.spectroscopy.io.soleil import SelectColumnReader, HDF5Reader_HERMES
 from orangecontrib.spectroscopy.preprocess import features_with_interpolation
@@ -441,8 +441,23 @@ class TestNeaGSF(unittest.TestCase):
         n_ifg = int(data.attributes['Pixel Area (X, Y, Z)'][3])
         self.assertEqual(n_ifg, 1024)
         self.assertEqual(n_ifg, len(data.domain.attributes))
+        self.assertEqual(data.attributes['Channel Data Type'][0], 'Polar')
+        self.assertEqual(data.attributes['Calculated Datapoint Spacing (Δx)'][0], '[cm]')
         check_attributes(data)
 
+class TestNeaMultiChannel(unittest.TestCase):
+    def test_read(self):
+        fn = 'NeaReaderMultichannel_test/Test_Au_Fourier_Scan_Synchrotron.txt'
+        absolute_filename = FileFormat.locate(fn, dataset_dirs)
+        data = NeaReaderMultiChannel(absolute_filename).read()
+        self.assertEqual(len(data), 24)
+        self.assertEqual("channel", data.domain.metas[3].name)
+        self.assertEqual("O0A", data.metas[0][3])
+        self.assertEqual("O0P", data.metas[1][3])
+        self.assertEqual(data.attributes['Channel Data Type'][0], 'Polar')
+        self.assertEqual(data.attributes['Calculated Datapoint Spacing (Δx)'][0], '[cm]')
+        self.assertEqual(data.attributes['Scan'], 'Fourier Scan')
+        check_attributes(data)
 
 class TestEnvi(unittest.TestCase):
 
