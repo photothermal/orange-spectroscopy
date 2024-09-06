@@ -336,7 +336,7 @@ class NeaReaderGSF(FileFormat, SpectralFileFormat):
 
 
 class NeaReaderMultiChannel(FileFormat):
-    EXTENSIONS = ".txt"
+    EXTENSIONS = (".txt",)
     DESCRIPTION = "NeaSPEC multichannel (raw) IFGs"
 
     def __init__(self, filename):
