@@ -273,6 +273,18 @@ class NeaReaderGSF(FileFormat, SpectralFileFormat):
                     i = f
                     f = i + px_z
 
+        # calculate datapoint spacing in cm for the fft widget
+        number_of_points = px_z
+        scan_size = float(
+            info["Interferometer Center/Distance"][2].replace(",", "")
+        )  # Microns
+        scan_size = scan_size * 1e-4  # Convert to cm
+        step_size = (scan_size * 2) / (number_of_points - 1)
+        # metadata info for the fft widget calculation
+        info["Calculated Datapoint Spacing (Δx)"] = ["[cm]", step_size]
+        # metadata info for selecting the correct fft method in the fft widget
+        info["Channel Data Type"] = "Polar", "i.e. Amplitude and Phase separated"
+
         return np.asarray(data_complete), info, final_metas
 
     def _html_reader(self, path):
