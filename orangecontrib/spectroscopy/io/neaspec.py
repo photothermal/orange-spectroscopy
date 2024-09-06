@@ -206,24 +206,32 @@ class NeaReaderGSF(FileFormat, SpectralFileFormat):
         file_channel = str(self.filename.split(' ')[-2]).strip()
         folder_file = str(self.filename.split(file_channel)[-2]).strip()
 
-        if 'P' in file_channel:
-            self.channel_p = file_channel
-            self.channel_a = file_channel.replace('P', 'A')
+        channel_p = ""
+        channel_a = ""
+        file_gsf_a = ""
+        file_gsf_p = ""
+        file_html = ""
+
+        if "P" in file_channel:
+            channel_p = file_channel
+            channel_a = file_channel.replace("P", "A")
             file_gsf_p = self.filename
-            file_gsf_a = self.filename.replace('P raw.gsf', 'A raw.gsf')
-            file_html = folder_file + '.html'
-        elif 'A' in file_channel:
-            self.channel_a = file_channel
-            self.channel_p = file_channel.replace('A', 'P')
+            file_gsf_a = self.filename.replace("P raw.gsf", "A raw.gsf")
+            file_html = folder_file + ".html"
+        elif "A" in file_channel:
+            channel_a = file_channel
+            channel_p = file_channel.replace("A", "P")
             file_gsf_a = self.filename
-            file_gsf_p = self.filename.replace('A raw.gsf', 'P raw.gsf')
-            file_html = folder_file + '.html'
+            file_gsf_p = self.filename.replace("A raw.gsf", "P raw.gsf")
+            file_html = folder_file + ".html"
 
         data_gsf_a = self._gsf_reader(file_gsf_a)
         data_gsf_p = self._gsf_reader(file_gsf_p)
         info = self._html_reader(file_html)
 
-        final_data, parameters, final_metas = self._format_file(data_gsf_a, data_gsf_p, info)
+        final_data, parameters, final_metas = self._format_file(
+            data_gsf_a, data_gsf_p, info, channel_a, channel_p
+        )
 
         metas = [Orange.data.ContinuousVariable.make("column"),
                  Orange.data.ContinuousVariable.make("row"),
@@ -240,7 +248,7 @@ class NeaReaderGSF(FileFormat, SpectralFileFormat):
 
         return depth, final_data, meta_data
 
-    def _format_file(self, gsf_a, gsf_p, parameters):
+    def _format_file(self, gsf_a, gsf_p, parameters, channel_a, channel_p):
 
         info = {}
         for row in parameters:
@@ -268,8 +276,8 @@ class NeaReaderGSF(FileFormat, SpectralFileFormat):
                 for run in range(0, averaging):
                     data_complete += [amplitude[i:f]]
                     data_complete += [phase[i:f]]
-                    final_metas += [[x, y, run, self.channel_a]]
-                    final_metas += [[x, y, run, self.channel_p]]
+                    final_metas += [[x, y, run, channel_a]]
+                    final_metas += [[x, y, run, channel_p]]
                     i = f
                     f = i + px_z
 
