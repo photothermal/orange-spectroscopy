@@ -576,6 +576,15 @@ class ImageSelectionMixin:
         if menu:
             menu.addAction(select_polygon)
 
+        line = QAction(
+            "Trace line", self, triggered=self.plot.vb.set_mode_select,
+        )
+        line.setShortcuts([Qt.Key_L])
+        line.setShortcutContext(Qt.WidgetWithChildrenShortcut)
+        self.addAction(line)
+        if menu:
+            menu.addAction(line)
+
     def select_square(self, p1, p2):
         """ Select elements within a square drawn by the user.
         A selection needs to contain whole pixels """
@@ -599,6 +608,10 @@ class ImageSelectionMixin:
             for p in points_edges[1:]:
                 inp *= in_polygon(p, polygon)
             self.make_selection(inp)
+
+    def select_line(self, p1, p2):
+        # hijacking existing selection functions to do stuff
+        print(p1, p2)
 
 
 class ImageColorLegend(GraphicsWidget):
