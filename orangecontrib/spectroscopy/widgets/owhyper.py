@@ -49,7 +49,7 @@ from orangecontrib.spectroscopy.widgets.owspectra import InteractiveViewBox, \
 from orangecontrib.spectroscopy.io.util import VisibleImage
 from orangecontrib.spectroscopy.widgets.gui import MovableVline, lineEditDecimalOrNone,\
     pixels_to_decimals, float_to_str_decimals
-from orangecontrib.spectroscopy.widgets.line_geometry import in_polygon
+from orangecontrib.spectroscopy.widgets.line_geometry import in_polygon, intersect_line_segments
 from orangecontrib.spectroscopy.widgets.utils import \
     SelectionGroupMixin, SelectionOutputsMixin
 
@@ -611,7 +611,30 @@ class ImageSelectionMixin:
 
     def select_line(self, p1, p2):
         # hijacking existing selection functions to do stuff
-        print(p1, p2)
+        p1x, p1y = p1.x(), p1.y()
+        p2x, p2y = p2.x(), p2.y()
+        if self.data and self.lsx and self.lsy:
+            # Pixel selection works so that a pixel is selected
+            # if the drawn line crosses any of its edges.
+            # An alternative that would ensure that only one pixel in row/column
+            # was selected is the Bresenham's line algorithm.
+            shiftx = _shift(self.lsx)
+            shifty = _shift(self.lsy)
+            points_edges = [self.data_points + [[shiftx, shifty]],
+                            self.data_points + [[-shiftx, shifty]],
+                            self.data_points + [[-shiftx, -shifty]],
+                            self.data_points + [[shiftx, -shifty]]]
+            sel = None
+            for i in range(4):
+                res = intersect_line_segments(points_edges[i - 1][:, 0], points_edges[i - 1][:, 1],
+                                              points_edges[i][:, 0], points_edges[i][:, 1],
+                                              p1x, p1y, p2x, p2y)
+                if sel is None:
+                    sel = res
+                else:
+                    sel |= res
+
+            self.make_selection(sel)
 
 
 class ImageColorLegend(GraphicsWidget):

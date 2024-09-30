@@ -71,7 +71,7 @@ def intersect_curves(x, ys, q1, q2):
     :param x: x values of curves (they have to be sorted).
     :param ys: y values of multiple curves sharing x values.
     :param q1: point of the line segment (x, y)
-    :param q2: point of the line segnemt (x, y)
+    :param q2: point of the line segment (x, y)
     :return:
     """
 
