@@ -11,6 +11,8 @@ from orangecontrib.spectroscopy.io.gsf import reader_gsf
 from orangecontrib.spectroscopy.io.util import SpectralFileFormat, _spectra_from_image
 from orangecontrib.spectroscopy.utils import MAP_X_VAR, MAP_Y_VAR
 
+import re
+
 class NeaReader(FileFormat, SpectralFileFormat):
 
     EXTENSIONS = (".nea", ".txt")
