@@ -335,7 +335,7 @@ class NeaReaderGSF(FileFormat, SpectralFileFormat):
         return np.asarray(X)
 
 
-class NeaReaderMultiChannel(FileFormat):
+class NeaReaderMultiChannel(FileFormat, SpectralFileFormat):
     EXTENSIONS = (".txt",)
     DESCRIPTION = "NeaSPEC multichannel (raw) IFGs"
 
@@ -580,22 +580,6 @@ class NeaReaderMultiChannel(FileFormat):
         # clean up the cartesian DataFrame
         self.cartesian_df = pd.DataFrame()
 
-    def read(self):
-        # builds the spectra table from the output of the read_spectra method
-        out_data_headers, out_data, meta_data = self.read_spectra()
-        features = [
-            ContinuousVariable(name=f"{f}", number_of_decimals=10, compute_value=f)
-            for f in out_data_headers
-        ]
-        domain = Domain(
-            features,
-            class_vars=meta_data.domain.class_vars,
-            metas=meta_data.domain.metas,
-        )
-        return Table.from_numpy(
-            domain, X=out_data, metas=meta_data.metas, attributes=meta_data.attributes
-        )
-
     def read_spectra(self):
         self.create_original_df(self.filename)
         self.create_padded_domain(self.original_df, padding=100)
@@ -604,26 +588,29 @@ class NeaReaderMultiChannel(FileFormat):
         df = self.resampled_df
         # format output to be used in the read method
 
-        self.original_df = []
+        # format data
         out_data = df.drop(columns=["Row", "Column", "Run", "Channel"]).values
         out_data = out_data.astype(np.float64)
         # formatting metas
         meta_domain = [
-            Orange.data.ContinuousVariable.make("column"),
-            Orange.data.ContinuousVariable.make("row"),
+            Orange.data.ContinuousVariable.make("map_x"),
+            Orange.data.ContinuousVariable.make("map_y"),
             Orange.data.ContinuousVariable.make("run"),
             Orange.data.StringVariable.make("channel"),
         ]
         out_meta = df[["Column", "Row", "Run", "Channel"]].values
 
         # formatting domain
+        # scale the domain to micrometers
+        scaled_domain = self.domain * 1e6
+        self.info["Domain Units"] = "[µm]"
         orange_domain = Orange.data.Domain([], None, metas=meta_domain)
         meta_data = Table.from_numpy(
             orange_domain,
             X=np.zeros((out_data.shape[0], 0)),
             metas=out_meta,
         )
+        # info for the fft widget
         self.info["Channel Data Type"] = "Polar", "i.e. Amplitude and Phase separated"
-
         meta_data.attributes = self.info
-        return self.domain, out_data, meta_data
+        return scaled_domain, out_data, meta_data
