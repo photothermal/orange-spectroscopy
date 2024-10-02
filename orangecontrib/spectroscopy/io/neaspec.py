@@ -4,12 +4,12 @@ import re
 import Orange
 import numpy as np
 import pandas as pd
-from Orange.data import FileFormat, Table, Domain, ContinuousVariable
+from Orange.data import FileFormat, Table
 from scipy.interpolate import interp1d
 
 from orangecontrib.spectroscopy.io.gsf import reader_gsf
 from orangecontrib.spectroscopy.io.util import SpectralFileFormat
-
+from orangecontrib.spectroscopy.utils import MAP_X_VAR, MAP_Y_VAR
 
 class NeaReader(FileFormat, SpectralFileFormat):
 
@@ -593,8 +593,8 @@ class NeaReaderMultiChannel(FileFormat, SpectralFileFormat):
         out_data = out_data.astype(np.float64)
         # formatting metas
         meta_domain = [
-            Orange.data.ContinuousVariable.make("map_x"),
-            Orange.data.ContinuousVariable.make("map_y"),
+            Orange.data.ContinuousVariable.make(MAP_X_VAR),
+            Orange.data.ContinuousVariable.make(MAP_Y_VAR),
             Orange.data.ContinuousVariable.make("run"),
             Orange.data.StringVariable.make("channel"),
         ]
