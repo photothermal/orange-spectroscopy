@@ -22,6 +22,16 @@ from orangecontrib.spectroscopy.widgets.owmultifile import OWMultifile, numpy_un
     wns_to_unique_str, decimals_neeeded_for_unique_str
 
 
+class ReadImaginaryFile(SPAReader):
+    read_count = -1
+
+    def read_spectra(self):
+        type(self).read_count += 1
+        if type(self).read_count == 0:
+            return np.array([1, 2]), np.array([[42, 41]]), None
+        return np.array([1, 2 + 1e-10]), np.array([[43, 44]]), None
+
+
 class TestOWFilesAuxiliary(unittest.TestCase):
 
     def test_numpy_union(self):
@@ -232,15 +242,6 @@ class TestOWMultifile(WidgetTest):
             self.assertEqual(CountTabReader.read_count, 1)
 
     def test_spectra_almost_same_wavenumbers(self):
-
-        class ReadImaginaryFile(SPAReader):
-            read_count = -1
-
-            def read_spectra(self):
-                type(self).read_count += 1
-                if type(self).read_count == 0:
-                    return np.array([1, 2]), np.array([[42, 41]]), None
-                return np.array([1, 2 + 1e-10]), np.array([[43, 44]]), None
 
         with patch.object(FileFormat, "registry", {"SPAReader": ReadImaginaryFile}):
             # clear LRU cache so that new classes get use
