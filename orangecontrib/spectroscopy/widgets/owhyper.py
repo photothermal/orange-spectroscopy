@@ -556,6 +556,9 @@ class ImageZoomMixin:
 
 class ImageSelectionMixin:
 
+    def __init__(self):
+        self.selection_distances = None
+
     def add_selection_actions(self, menu):
 
         select_square = QAction(
@@ -634,7 +637,11 @@ class ImageSelectionMixin:
                 else:
                     sel |= res
 
-            self.make_selection(sel)
+            distances = np.full(self.data_points.shape[0], np.nan)
+            distances[sel] = np.linalg.norm(self.data_points[sel] - [[p1x, p1y]], axis=1)
+
+            modifiers = (False, False, False)  # enforce a new selection
+            self.make_selection(sel, distances=distances, modifiers=modifiers)
 
 
 class ImageColorLegend(GraphicsWidget):
@@ -892,9 +899,10 @@ class BasicImagePlot(QWidget, OWComponent, SelectionGroupMixin,
             self.selection_group[self.data_valid_positions]
         self.img.setSelection(selected_px)
 
-    def make_selection(self, selected):
+    def make_selection(self, selected, distances=None, modifiers=None):
         """Add selected indices to the selection."""
-        add_to_group, add_group, remove = selection_modifiers()
+        add_to_group, add_group, remove = \
+            selection_modifiers() if modifiers is None else modifiers
         if self.data and self.lsx and self.lsy:
             if add_to_group:  # both keys - need to test it before add_group
                 selnum = np.max(self.selection_group)
@@ -908,6 +916,7 @@ class BasicImagePlot(QWidget, OWComponent, SelectionGroupMixin,
             if selected is not None:
                 self.selection_group[selected] = selnum
             self.refresh_img_selection()
+        self.selection_distances = distances  # these are not going to be saved for now
         self.prepare_settings_for_saving()
         self.selection_changed.emit()
 
