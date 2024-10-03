@@ -11,8 +11,6 @@ from orangecontrib.spectroscopy.io.gsf import reader_gsf
 from orangecontrib.spectroscopy.io.util import SpectralFileFormat, _spectra_from_image
 from orangecontrib.spectroscopy.utils import MAP_X_VAR, MAP_Y_VAR
 
-import re
-
 class NeaReader(FileFormat, SpectralFileFormat):
 
     EXTENSIONS = (".nea", ".txt")
@@ -228,7 +226,6 @@ class NeaReaderGSF(FileFormat, SpectralFileFormat):
             file_html = folder_file + ".html"
 
         data_gsf_a = self._gsf_reader(file_gsf_a)
-        print(np.shape(data_gsf_a))
         data_gsf_p = self._gsf_reader(file_gsf_p)
         info = self._html_reader(file_html)
 
@@ -336,7 +333,8 @@ class NeaReaderGSF(FileFormat, SpectralFileFormat):
     def _gsf_reader(self, path):
         X, _, _ = reader_gsf(path)
         return np.asarray(X)
-    
+
+
 class NeaImageGSF(FileFormat, SpectralFileFormat):
 
     EXTENSIONS = (".gsf",)
@@ -364,7 +362,6 @@ class NeaImageGSF(FileFormat, SpectralFileFormat):
         meta_data.attributes["measurement.signaltype"] = signal_type
 
         return features, final_data, meta_data
-
 
 
 class NeaReaderMultiChannel(FileFormat, SpectralFileFormat):
