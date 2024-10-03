@@ -46,7 +46,7 @@ from orangecontrib.spectroscopy.widgets.owspectra import InteractiveViewBox, \
     HelpEventDelegate, selection_modifiers, \
     ParameterSetter as SpectraParameterSetter
 
-from orangecontrib.spectroscopy.io.util import VisibleImage
+from orangecontrib.spectroscopy.io.util import VisibleImage, build_spec_table
 from orangecontrib.spectroscopy.widgets.gui import MovableVline, lineEditDecimalOrNone,\
     pixels_to_decimals, float_to_str_decimals
 from orangecontrib.spectroscopy.widgets.line_geometry import in_polygon, intersect_line_segments
@@ -1242,6 +1242,14 @@ class OWHyper(OWWidget, SelectionOutputsMixin):
         self.curveplot.locked_axes_changed.connect(
             lambda locked: self.Information.view_locked(shown=locked))
 
+        self.traceplot = CurvePlotHyper(self, select=None)
+        self.traceplot.plot.vb.x_padding = 0.005  # pad view so that lines are not hidden
+        splitter.addWidget(self.traceplot)
+        self.traceplot.button.hide()
+        self.traceplot.hide()
+        self.imageplot.selection_changed.connect(self.draw_trace)
+        self.imageplot.image_updated.connect(self.draw_trace)
+
         self.line1 = MovableVline(position=self.lowlim, label="", report=self.curveplot)
         self.line1.sigMoved.connect(lambda v: setattr(self, "lowlim", v))
         self.line2 = MovableVline(position=self.highlim, label="", report=self.curveplot)
@@ -1337,6 +1345,32 @@ class OWHyper(OWWidget, SelectionOutputsMixin):
     def output_image_selection(self):
         _, selected = self.send_selection(self.data, self.imageplot.selection_group)
         self.curveplot.set_data(selected if selected else self.data)
+
+    def draw_trace(self):
+        distances = self.imageplot.selection_distances
+        sel = self.imageplot.selection_group > 0
+        self.traceplot.set_data(None)
+        if distances is not None and self.imageplot.data \
+            and self.imageplot.lsx and self.imageplot.lsy:
+            distances = distances[sel]
+            sortidx = np.argsort(distances)
+            values = self.imageplot.data_values[sel]
+            x = distances[sortidx]
+            y = values[sortidx]
+
+            # combine xs with the same value
+            groups, pos, g_count = np.unique(x,
+                                          return_index=True,
+                                          return_counts=True)
+            g_sum = np.add.reduceat(y, pos, axis=0)
+            g_mean = g_sum / g_count[:, None]
+            x, y = groups, g_mean
+
+            traceplot_data = build_spec_table(x, y.T, None)
+            self.traceplot.set_data(traceplot_data)
+            self.traceplot.show()
+        else:
+            self.traceplot.hide()
 
     def init_attr_values(self, data):
         domain = data.domain if data is not None else None
