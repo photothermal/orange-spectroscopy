@@ -361,7 +361,7 @@ class NeaImageGSF(FileFormat, SpectralFileFormat):
         X, XRr, YRr = reader_gsf(self.filename)
         features, final_data, meta_data = _spectra_from_image(X, np.array([1]), XRr, YRr)
 
-        meta_data.attributes["signal_type"] = signal_type
+        meta_data.attributes["measurement.signaltype"] = signal_type
 
         return features, final_data, meta_data
 
