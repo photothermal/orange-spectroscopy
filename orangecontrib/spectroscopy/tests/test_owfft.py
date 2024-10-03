@@ -128,8 +128,14 @@ class TestOWFFT(WidgetTest):
 
         self.send_signal(self.widget.Inputs.data, self.ifg_gsf)
         self.commit_and_wait()
-        result_gsf = self.get_output(self.widget.Outputs.spectra)
+        # testing info panel text associated with the input file metadata
+        widget_text = self.widget.infoc.text()
+        self.assertIn('Applying Complex Fourier Transform.', widget_text)
+        self.assertIn('Using Calculated Datapoint Spacing (Δx) from metadata', widget_text)
 
-        np.testing.assert_allclose(result_gsf.X.size, (4098)) #array
-        np.testing.assert_allclose(result_gsf.X[0, 396:399], (23.67618359, 25.02051088, 25.82566789)) #Amplitude
-        np.testing.assert_allclose(result_gsf.X[1, 396:399], (2.61539453, 2.65495979, 2.72814989)) #Phase
+        spectra = self.get_output(self.widget.Outputs.spectra)
+        phases = self.get_output(self.widget.Outputs.phases)
+        np.testing.assert_allclose(spectra.X.size, (2049))
+        np.testing.assert_allclose(phases.X.size, (2049))
+        np.testing.assert_allclose(spectra.X[0, 396:399], (23.67618359, 25.02051088, 25.82566789))
+        np.testing.assert_allclose(phases.X[0, 396:399], (2.61539453, 2.65495979, 2.72814989))
