@@ -350,18 +350,18 @@ class NeaImageGSF(FileFormat, SpectralFileFormat):
                 channel_name = re.search(pattern, self.filename)[0]
 
         if 'P' in channel_name:
-            datatype = "Phase"
+            signal_type = "Phase"
         elif 'A' in channel_name:
-            datatype = "Amplitude"
+            signal_type = "Amplitude"
         elif 'Z' in channel_name:
-            datatype = "Topography"
+            signal_type = "Topography"
         else:
-            datatype = "None"
+            signal_type = "None"
 
         X, XRr, YRr = reader_gsf(self.filename)
         features, final_data, meta_data = _spectra_from_image(X, np.array([1]), XRr, YRr)
 
-        meta_data.attributes["datatype"] = datatype
+        meta_data.attributes["signal_type"] = signal_type
 
         return features, final_data, meta_data
 
