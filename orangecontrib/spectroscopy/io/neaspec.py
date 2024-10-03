@@ -337,10 +337,10 @@ class NeaReaderGSF(FileFormat, SpectralFileFormat):
         X, _, _ = reader_gsf(path)
         return np.asarray(X)
     
-class SimpleNeaGSF(FileFormat, SpectralFileFormat):
+class NeaImageGSF(FileFormat, SpectralFileFormat):
 
     EXTENSIONS = (".gsf",)
-    DESCRIPTION = 'Single NeaGSF files'
+    DESCRIPTION = 'Single NeaGSF image files'
 
     def read_spectra(self):
 
