@@ -234,9 +234,11 @@ class TestOWHyper(WidgetTest):
         self.assertIsNone(out, None)
 
         # select specific points
-        self.widget.imageplot.select_square(QPointF(9.4, 9.4), QPointF(11.6, 10.6))
+        self.widget.imageplot.select_square(QPointF(53.20, 30.0), QPointF(53.21, 30.03))
         out = self.get_output("Selection")
-        np.testing.assert_equal(out.metas, [[10, 10], [11, 10]])
+        np.testing.assert_almost_equal(out.metas,
+                                       [[53.2043, 30.0185], [53.2043, 30.0085]],
+                                       decimal=3)
         np.testing.assert_equal([o[out.domain["Group"]].value for o in out],
                                 ["G1", "G1"])
 
@@ -244,31 +246,31 @@ class TestOWHyper(WidgetTest):
         # rectangle and a polygon need to give the same results
         self.send_signal("Data", self.whitelight)
         wait_for_image(self.widget)
-        self.widget.imageplot.select_square(QPointF(5, 5), QPointF(15, 10))
+        self.widget.imageplot.select_square(QPointF(53, 30), QPointF(54, 31))
         out = self.get_output("Selection")
-        self.widget.imageplot.select_polygon([QPointF(5, 5), QPointF(15, 5), QPointF(15, 10),
-                                              QPointF(5, 10), QPointF(5, 5)])
+        self.widget.imageplot.select_polygon([QPointF(53, 30), QPointF(53, 31), QPointF(54, 31),
+                                              QPointF(54, 30), QPointF(53, 30)])
         outpoly = self.get_output("Selection")
         self.assertEqual(list(out), list(outpoly))
 
     def test_select_click(self):
         self.send_signal("Data", self.whitelight)
         wait_for_image(self.widget)
-        self.widget.imageplot.select_by_click(QPointF(1, 2))
+        self.widget.imageplot.select_by_click(QPointF(53.2443, 30.6984))
         out = self.get_output("Selection")
-        np.testing.assert_equal(out.metas, [[1, 2]])
+        np.testing.assert_almost_equal(out.metas, [[53.2443, 30.6984]], decimal=3)
 
     def test_select_click_multiple_groups(self):
         data = self.whitelight
         self.send_signal("Data", data)
         wait_for_image(self.widget)
-        self.widget.imageplot.select_by_click(QPointF(1, 2))
+        self.widget.imageplot.select_by_click(QPointF(53.2, 30))
         with hold_modifiers(self.widget, Qt.ShiftModifier):
-            self.widget.imageplot.select_by_click(QPointF(2, 2))
+            self.widget.imageplot.select_by_click(QPointF(53.4, 30))
         with hold_modifiers(self.widget, Qt.ShiftModifier):
-            self.widget.imageplot.select_by_click(QPointF(3, 2))
+            self.widget.imageplot.select_by_click(QPointF(53.6, 30))
         with hold_modifiers(self.widget, Qt.ControlModifier):
-            self.widget.imageplot.select_by_click(QPointF(4, 2))
+            self.widget.imageplot.select_by_click(QPointF(53.8, 30))
         out = self.get_output(self.widget.Outputs.annotated_data)
         self.assertEqual(len(out), 20000)  # have a data table at the output
         newvars = out.domain.variables + out.domain.metas
@@ -278,7 +280,9 @@ class TestOWHyper(WidgetTest):
         out = out[np.asarray(np.flatnonzero(
             out.transform(Orange.data.Domain([group_at])).X != unselected))]
         self.assertEqual(len(out), 4)
-        np.testing.assert_equal([o["map_x"].value for o in out], [1, 2, 3, 4])
+        np.testing.assert_almost_equal([o["map_x"].value for o in out],
+                                       [53.1993, 53.3993, 53.5993, 53.7993],
+                                       decimal=3)
         np.testing.assert_equal([o[group_at].value for o in out], ["G1", "G2", "G3", "G3"])
         out = self.get_output(self.widget.Outputs.selected_data)
         np.testing.assert_equal([o[out.domain["Group"]].value for o in out],
@@ -286,7 +290,7 @@ class TestOWHyper(WidgetTest):
 
         # remove one element
         with hold_modifiers(self.widget, Qt.AltModifier):
-            self.widget.imageplot.select_by_click(QPointF(1, 2))
+            self.widget.imageplot.select_by_click(QPointF(53.2, 30))
         out = self.get_output(self.widget.Outputs.selected_data)
         np.testing.assert_equal(len(out), 3)
         np.testing.assert_equal([o[out.domain["Group"]].value for o in out],

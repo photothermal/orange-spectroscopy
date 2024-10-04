@@ -75,19 +75,20 @@ class TestOWSpectralSeries(WidgetTest):
 
     def test_select_click(self):
         self.send_signal("Data", self.whitelight)
-        self.widget.imageplot.select_by_click(QPointF(1, 2))
+        self.widget.imageplot.select_by_click(QPointF(0, 1))
         # work by indices
         out = self.get_output("Selection")
-        np.testing.assert_equal(out.metas[:, 0], 1)
-        np.testing.assert_equal(out.metas[:, 1], 99)
+        np.testing.assert_almost_equal(out.metas[:, 0], 53.0693, decimal=3)
+        np.testing.assert_almost_equal(out.metas[:, 1], 30.7085, decimal=3)
         np.testing.assert_equal(out.Y, 0)  # selection group
         # select a feature
         self.widget.imageplot.attr_x = "map_x"
         self.widget.imageplot.update_attr()
-        self.widget.imageplot.select_by_click(QPointF(1, 2))
+        self.widget.imageplot.select_by_click(QPointF(53.1, 1))
         out = self.get_output("Selection")
-        np.testing.assert_equal(out.metas[:, 0], 1)
-        np.testing.assert_equal(out.metas[:, 1], list(reversed(np.arange(100))))
+        np.testing.assert_almost_equal(out.metas[:, 0], 53.099327, decimal=3)
+        np.testing.assert_almost_equal(out.metas[:, 1],
+                                       self.whitelight[::200].metas[:, 1], decimal=3)
         np.testing.assert_equal(out.Y, 0)  # selection group
 
     def test_single_update_view(self):

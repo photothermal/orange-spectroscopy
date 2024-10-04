@@ -392,13 +392,16 @@ class TestGSF(unittest.TestCase):
         self.assertEqual(data.X.shape, (20000, 1))
         # check some pixel vaules
         self.assertAlmostEqual(data.X[235,0], 1.2788502, 7)
-        np.testing.assert_array_equal(data.metas[235], [35, 98])
+        np.testing.assert_almost_equal(data.metas[235],
+                                       [53.2443, 30.6984], decimal=3)
 
         self.assertAlmostEqual(data.X[1235,0], 1.2770579, 7)
-        np.testing.assert_array_equal(data.metas[1235], [35, 93])
+        np.testing.assert_almost_equal(data.metas[1235],
+                                       [53.2443, 30.6484], decimal=3)
 
         self.assertAlmostEqual(data.X[11235,0], 1.2476133, 7)
-        np.testing.assert_array_equal(data.metas[11235], [35, 43])
+        np.testing.assert_almost_equal(data.metas[11235],
+                                       [53.2443, 30.1484], decimal=3)
 
 
 class TestNea(unittest.TestCase):
