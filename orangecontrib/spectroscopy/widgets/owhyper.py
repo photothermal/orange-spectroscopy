@@ -46,10 +46,10 @@ from orangecontrib.spectroscopy.widgets.owspectra import InteractiveViewBox, \
     HelpEventDelegate, selection_modifiers, \
     ParameterSetter as SpectraParameterSetter
 
-from orangecontrib.spectroscopy.io.util import VisibleImage
+from orangecontrib.spectroscopy.io.util import VisibleImage, build_spec_table
 from orangecontrib.spectroscopy.widgets.gui import MovableVline, lineEditDecimalOrNone,\
     pixels_to_decimals, float_to_str_decimals
-from orangecontrib.spectroscopy.widgets.line_geometry import in_polygon
+from orangecontrib.spectroscopy.widgets.line_geometry import in_polygon, intersect_line_segments
 from orangecontrib.spectroscopy.widgets.utils import \
     SelectionGroupMixin, SelectionOutputsMixin
 
@@ -556,6 +556,9 @@ class ImageZoomMixin:
 
 class ImageSelectionMixin:
 
+    def __init__(self):
+        self.selection_distances = None
+
     def add_selection_actions(self, menu):
 
         select_square = QAction(
@@ -575,6 +578,15 @@ class ImageSelectionMixin:
         self.addAction(select_polygon)
         if menu:
             menu.addAction(select_polygon)
+
+        line = QAction(
+            "Trace line", self, triggered=self.plot.vb.set_mode_select,
+        )
+        line.setShortcuts([Qt.Key_L])
+        line.setShortcutContext(Qt.WidgetWithChildrenShortcut)
+        self.addAction(line)
+        if menu:
+            menu.addAction(line)
 
     def select_square(self, p1, p2):
         """ Select elements within a square drawn by the user.
@@ -599,6 +611,37 @@ class ImageSelectionMixin:
             for p in points_edges[1:]:
                 inp *= in_polygon(p, polygon)
             self.make_selection(inp)
+
+    def select_line(self, p1, p2):
+        # hijacking existing selection functions to do stuff
+        p1x, p1y = p1.x(), p1.y()
+        p2x, p2y = p2.x(), p2.y()
+        if self.data and self.lsx and self.lsy:
+            # Pixel selection works so that a pixel is selected
+            # if the drawn line crosses any of its edges.
+            # An alternative that would ensure that only one pixel in row/column
+            # was selected is the Bresenham's line algorithm.
+            shiftx = _shift(self.lsx)
+            shifty = _shift(self.lsy)
+            points_edges = [self.data_points + [[shiftx, shifty]],
+                            self.data_points + [[-shiftx, shifty]],
+                            self.data_points + [[-shiftx, -shifty]],
+                            self.data_points + [[shiftx, -shifty]]]
+            sel = None
+            for i in range(4):
+                res = intersect_line_segments(points_edges[i - 1][:, 0], points_edges[i - 1][:, 1],
+                                              points_edges[i][:, 0], points_edges[i][:, 1],
+                                              p1x, p1y, p2x, p2y)
+                if sel is None:
+                    sel = res
+                else:
+                    sel |= res
+
+            distances = np.full(self.data_points.shape[0], np.nan)
+            distances[sel] = np.linalg.norm(self.data_points[sel] - [[p1x, p1y]], axis=1)
+
+            modifiers = (False, False, False)  # enforce a new selection
+            self.make_selection(sel, distances=distances, modifiers=modifiers)
 
 
 class ImageColorLegend(GraphicsWidget):
@@ -856,9 +899,10 @@ class BasicImagePlot(QWidget, OWComponent, SelectionGroupMixin,
             self.selection_group[self.data_valid_positions]
         self.img.setSelection(selected_px)
 
-    def make_selection(self, selected):
+    def make_selection(self, selected, distances=None, modifiers=None):
         """Add selected indices to the selection."""
-        add_to_group, add_group, remove = selection_modifiers()
+        add_to_group, add_group, remove = \
+            selection_modifiers() if modifiers is None else modifiers
         if self.data and self.lsx and self.lsy:
             if add_to_group:  # both keys - need to test it before add_group
                 selnum = np.max(self.selection_group)
@@ -872,6 +916,7 @@ class BasicImagePlot(QWidget, OWComponent, SelectionGroupMixin,
             if selected is not None:
                 self.selection_group[selected] = selnum
             self.refresh_img_selection()
+        self.selection_distances = distances  # these are not going to be saved for now
         self.prepare_settings_for_saving()
         self.selection_changed.emit()
 
@@ -1197,6 +1242,14 @@ class OWHyper(OWWidget, SelectionOutputsMixin):
         self.curveplot.locked_axes_changed.connect(
             lambda locked: self.Information.view_locked(shown=locked))
 
+        self.traceplot = CurvePlotHyper(self)
+        self.traceplot.plot.vb.x_padding = 0.005  # pad view so that lines are not hidden
+        splitter.addWidget(self.traceplot)
+        self.traceplot.button.hide()
+        self.traceplot.hide()
+        self.imageplot.selection_changed.connect(self.draw_trace)
+        self.imageplot.image_updated.connect(self.draw_trace)
+
         self.line1 = MovableVline(position=self.lowlim, label="", report=self.curveplot)
         self.line1.sigMoved.connect(lambda v: setattr(self, "lowlim", v))
         self.line2 = MovableVline(position=self.highlim, label="", report=self.curveplot)
@@ -1292,6 +1345,32 @@ class OWHyper(OWWidget, SelectionOutputsMixin):
     def output_image_selection(self):
         _, selected = self.send_selection(self.data, self.imageplot.selection_group)
         self.curveplot.set_data(selected if selected else self.data)
+
+    def draw_trace(self):
+        distances = self.imageplot.selection_distances
+        sel = self.imageplot.selection_group > 0
+        self.traceplot.set_data(None)
+        if distances is not None and self.imageplot.data \
+            and self.imageplot.lsx and self.imageplot.lsy:
+            distances = distances[sel]
+            sortidx = np.argsort(distances)
+            values = self.imageplot.data_values[sel]
+            x = distances[sortidx]
+            y = values[sortidx]
+
+            # combine xs with the same value
+            groups, pos, g_count = np.unique(x,
+                                          return_index=True,
+                                          return_counts=True)
+            g_sum = np.add.reduceat(y, pos, axis=0)
+            g_mean = g_sum / g_count[:, None]
+            x, y = groups, g_mean
+
+            traceplot_data = build_spec_table(x, y.T, None)
+            self.traceplot.set_data(traceplot_data)
+            self.traceplot.show()
+        else:
+            self.traceplot.hide()
 
     def init_attr_values(self, data):
         domain = data.domain if data is not None else None
