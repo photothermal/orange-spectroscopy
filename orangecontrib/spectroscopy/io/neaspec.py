@@ -582,7 +582,20 @@ class NeaReaderMultiChannel(FileFormat, SpectralFileFormat):
                              M maximum values are outside the expected range."
             )
         self.domain = np.arange(d_start, d_end, dm)
-        dx = 2 * float(dm) * 1e2  # convert [m] to [cm]
+        self.calculate_datapoint_spacing(dm)
+
+    def calculate_datapoint_spacing(self, domain_spacing):
+        # calculate datapoint spacing in cm for the fft widget as the optical path
+        dx = 2 * float(domain_spacing) * 1e2  # convert [m] to [cm]
+        # check file headers for wavenumber scaling factor
+        # and apply it to the calculated spacing
+        try:
+            wavenumber_scaling = self.info["Wavenumber Scaling"]
+            wavenumber_scaling = float(wavenumber_scaling)
+            dx = dx / wavenumber_scaling
+        except KeyError:
+            pass
+        # register the calculated spacing in the metadata
         self.info["Calculated Datapoint Spacing (Δx)"] = ["[cm]", dx]
 
     def create_original_df(self, fpath):
