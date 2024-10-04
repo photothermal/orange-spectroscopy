@@ -338,7 +338,7 @@ class NeaReaderGSF(FileFormat, SpectralFileFormat):
 class NeaImageGSF(FileFormat, SpectralFileFormat):
 
     EXTENSIONS = (".gsf",)
-    DESCRIPTION = 'Single NeaGSF image files'
+    DESCRIPTION = 'NeaSPEC single image'
 
     def read_spectra(self):
 
