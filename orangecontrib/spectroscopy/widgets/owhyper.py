@@ -1242,7 +1242,7 @@ class OWHyper(OWWidget, SelectionOutputsMixin):
         self.curveplot.locked_axes_changed.connect(
             lambda locked: self.Information.view_locked(shown=locked))
 
-        self.traceplot = CurvePlotHyper(self, select=None)
+        self.traceplot = CurvePlotHyper(self)
         self.traceplot.plot.vb.x_padding = 0.005  # pad view so that lines are not hidden
         splitter.addWidget(self.traceplot)
         self.traceplot.button.hide()
