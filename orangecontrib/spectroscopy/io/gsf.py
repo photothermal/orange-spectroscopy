@@ -37,6 +37,7 @@ def reader_gsf(file_path):
         X = np.fromfile(f, dtype='float32', count=XR*YR).reshape(XR, YR)
 
         XRr = np.arange(XR)
+        # TODO change this to the NeaSCAN orientation
         YRr = np.arange(YR-1, -1, -1)  # needed to have the same orientation as in Gwyddion
 
         XRr = XOffset*1E6 + (XReal*1E6/XR) * XRr
