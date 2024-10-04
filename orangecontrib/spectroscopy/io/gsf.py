@@ -26,10 +26,10 @@ def reader_gsf(file_path):
 
         meta["XRes"] = XR = int(meta["XRes"])
         meta["YRes"] = YR = int(meta["YRes"])
-        meta["XReal"] = float(meta.get("XReal", 1))
-        meta["YReal"] = float(meta.get("YReal", 1))
-        meta["XOffset"] = float(meta.get("XOffset", 0))
-        meta["YOffset"] = float(meta.get("YOffset", 0))
+        meta["XReal"] = XReal = float(meta.get("XReal", 1))
+        meta["YReal"] = YReal = float(meta.get("YReal", 1))
+        meta["XOffset"] = XOffset = float(meta.get("XOffset", 0))
+        meta["YOffset"] = YOffset = float(meta.get("YOffset", 0))
         meta["Title"] = meta.get("Title", None)
         meta["XYUnits"] = meta.get("XYUnits", None)
         meta["ZUnits"] = meta.get("ZUnits", None)
@@ -37,7 +37,11 @@ def reader_gsf(file_path):
         X = np.fromfile(f, dtype='float32', count=XR*YR).reshape(XR, YR)
 
         XRr = np.arange(XR)
+        # TODO change this to the NeaSCAN orientation
         YRr = np.arange(YR-1, -1, -1)  # needed to have the same orientation as in Gwyddion
+
+        XRr = XOffset*1E6 + (XReal*1E6/XR) * XRr
+        YRr = YOffset*1E6 + (YReal*1E6/YR) * YRr
 
         X = X.reshape((meta["YRes"], meta["XRes"]) + (1,))
 

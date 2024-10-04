@@ -360,6 +360,7 @@ class NeaImageGSF(FileFormat, SpectralFileFormat):
         features, final_data, meta_data = _spectra_from_image(X, np.array([1]), XRr, YRr)
 
         meta_data.attributes["measurement.signaltype"] = signal_type
+        # TODO add all the meta info here from the Gwyddion header
 
         return features, final_data, meta_data
 
