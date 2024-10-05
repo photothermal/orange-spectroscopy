@@ -1107,7 +1107,7 @@ class OWHyper(OWWidget, SelectionOutputsMixin):
     imageplot = SettingProvider(ImagePlot)
     curveplot = SettingProvider(CurvePlotHyper)
 
-    integration_method = Setting(0)
+    integration_method = Setting(4)  # Closest value
     integration_methods = Integrate.INTEGRALS
     value_type = Setting(0)
     attr_value = ContextSetting(None)

@@ -22,7 +22,8 @@ from Orange.util import OrangeDeprecationWarning
 
 from orangecontrib.spectroscopy.data import _spectra_from_image, build_spec_table
 from orangecontrib.spectroscopy.io.util import VisibleImage
-from orangecontrib.spectroscopy.preprocess.integrate import IntegrateFeaturePeakSimple, Integrate
+from orangecontrib.spectroscopy.preprocess.integrate import IntegrateFeaturePeakSimple, \
+    Integrate, IntegrateFeatureSimple
 from orangecontrib.spectroscopy.widgets import owhyper
 from orangecontrib.spectroscopy.widgets.owhyper import \
     OWHyper
@@ -419,7 +420,9 @@ class TestOWHyper(WidgetTest):
 
         wrap = self.widget.imageplot.img
 
-        # integrals from zero; default
+        # integral from zero
+        self.widget.integration_method = \
+            self.widget.integration_methods.index(IntegrateFeatureSimple)
         self.send_signal("Data", data)
         with patch.object(wrap, 'setImage', wraps=wrap.setImage) as m:
             wait_for_image(self.widget)
