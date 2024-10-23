@@ -889,6 +889,7 @@ class BasicImagePlot(QWidget, OWComponent, SelectionGroupMixin,
         else:
             self.data = None
             self.data_ids = {}
+        self.selection_distances = None
 
     def refresh_img_selection(self):
         if self.lsx is None or self.lsy is None:
