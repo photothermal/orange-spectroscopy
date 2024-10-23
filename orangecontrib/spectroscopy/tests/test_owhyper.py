@@ -261,6 +261,18 @@ class TestOWHyper(WidgetTest):
         out = self.get_output("Selection")
         np.testing.assert_almost_equal(out.metas, [[53.2443, 30.6984]], decimal=3)
 
+    def test_select_line_change_file(self):
+        self.send_signal("Data", self.whitelight)
+        wait_for_image(self.widget)
+        # select whole image row
+        self.widget.imageplot.select_line(QPointF(50, 30.6), QPointF(55, 30.6))
+        out = self.get_output("Selection")
+        self.assertEqual(len(out), 200)
+        self.send_signal("Data", self.iris)
+        wait_for_image(self.widget)
+        out = self.get_output("Selection")
+        self.assertIsNone(out, None)
+
     def test_select_click_multiple_groups(self):
         data = self.whitelight
         self.send_signal("Data", data)
