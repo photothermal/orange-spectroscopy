@@ -1365,6 +1365,7 @@ class OWHyper(OWWidget, SelectionOutputsMixin):
 
     class Warning(OWWidget.Warning):
         threshold_error = Msg("Low slider should be less than High")
+        bin_size_error = Msg("Selected bin size larger than image size, bin size {} x {} used")
 
     class Error(OWWidget.Error):
         image_too_big = Msg("Image for chosen features is too big ({} x {}).")
@@ -1689,6 +1690,7 @@ class OWHyper(OWWidget, SelectionOutputsMixin):
         self.update_binsize()
 
     def update_binsize(self):
+        self.Warning.bin_size_error.clear()
         if self.v_bin == 0:
             self.v_bin_change = 0
             self.imageplot.update_vectors()
@@ -1717,6 +1719,9 @@ class OWHyper(OWWidget, SelectionOutputsMixin):
                 th_df = df.pivot_table(values = 'th', columns = 'x', index = 'y')
                 col_df = df.pivot_table(values = 'cols', columns = 'x', index = 'y')
                 bin_sz = self.v_bin+1
+                if bin_sz > v_df.shape[0] or bin_sz > v_df.shape[1]:
+                    bin_sz = v_df.shape[0] if bin_sz > v_df.shape[0] else v_df.shape[1]
+                    self.Warning.bin_size_error(bin_sz, bin_sz)
                 x_mod, y_mod = v_df.shape[1] % bin_sz, v_df.shape[0] % bin_sz
                 st_x_idx = int(np.floor(x_mod/2))
                 st_y_idx = int(np.floor(y_mod/2))
