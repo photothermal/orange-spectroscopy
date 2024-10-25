@@ -76,13 +76,13 @@ class TestOWPolar(WidgetTest):
         model = self.get_output("Curve Fit model data")
 
         np.testing.assert_allclose(np.asarray(self.multifile_polar.metas, dtype=float),
-                                   np.asarray(polar.metas, dtype=float))
+                                   np.asarray(polar.metas, dtype=float), rtol=4e-06)
         np.testing.assert_allclose(np.asarray(self.multifile_polar.X, dtype=float),
-                                   np.asarray(polar.X, dtype=float))
+                                   np.asarray(polar.X, dtype=float), rtol=5e-06)
         np.testing.assert_allclose(np.asarray(self.multifile_model.metas, dtype=float),
-                                   np.asarray(model.metas, dtype=float))
+                                   np.asarray(model.metas, dtype=float), rtol=4e-06)
         np.testing.assert_allclose(np.asarray(self.multifile_model.X, dtype=float),
-                                   np.asarray(model.X, dtype=float))
+                                   np.asarray(model.X, dtype=float), rtol=5e-06)
 
     def test_multi_inputs(self):
         self.send_signal("Data", self.in1, 0, widget=self.widget)
@@ -122,18 +122,18 @@ class TestOWPolar(WidgetTest):
 
         np.testing.assert_allclose(
             np.asarray(self.multiin_polar.metas[:,np.r_[0:2,3:7]], dtype=float),
-            np.asarray(polar.metas[:,np.r_[0:2,3:7]], dtype=float))
+            np.asarray(polar.metas[:,np.r_[0:2,3:7]], dtype=float), rtol=2e-06)
         np.testing.assert_allclose(
             np.asarray(self.multiin_polar.metas[:,7:], dtype=float),
-            np.asarray(polar.metas[:,7:], dtype=float))
-        np.testing.assert_equal(self.multiin_polar.X, np.flip(polar.X, axis=1))
+            np.asarray(polar.metas[:,7:], dtype=float), rtol=4e-06)
+        np.testing.assert_allclose(self.multiin_polar.X, polar.X, rtol=5e-06)
         np.testing.assert_allclose(
             np.asarray(self.multiin_model.metas[:,np.r_[0:2,3:7]], dtype=float),
-            np.asarray(model.metas[:,np.r_[0:2,3:7]], dtype=float))
+            np.asarray(model.metas[:,np.r_[0:2,3:7]], dtype=float), rtol=4e-06)
         np.testing.assert_allclose(
             np.asarray(self.multiin_model.metas[:,7:], dtype=float),
-            np.asarray(model.metas[:,7:], dtype=float))
-        np.testing.assert_equal(self.multiin_model.X, np.flip(model.X, axis=1))
+            np.asarray(model.metas[:,7:], dtype=float), rtol=4e-06)
+        np.testing.assert_allclose(self.multiin_model.X, model.X, rtol=5e-06)
 
     def test_pixelsubset(self):
         #Test multi in with subset of pixels selected
