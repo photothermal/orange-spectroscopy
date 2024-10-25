@@ -743,6 +743,16 @@ class ImageColorLegend(GraphicsWidget):
 
 class ImageParameterSetter(CommonParameterSetter):
     IMAGE_ANNOT_BOX = "Image annotations"
+    BKG_CBAR = "Colorbar"
+    VECT_CBAR = "Vector Colorbar"
+
+    def update_cbar_label(self, **settings):
+        self.colorbar.setLabel(settings[self.TITLE_LABEL])
+        self.colorbar.resizeEvent(None)
+
+    def update_vcbar_label(self, **settings):
+        self.vcolorbar.setLabel(settings[self.TITLE_LABEL])
+        self.vcolorbar.resizeEvent(None)
 
     def __init__(self, master):
         super().__init__()
@@ -754,10 +764,16 @@ class ImageParameterSetter(CommonParameterSetter):
                 self.TITLE_LABEL: {self.TITLE_LABEL: ("", "")},
                 self.X_AXIS_LABEL: {self.TITLE_LABEL: ("", "")},
                 self.Y_AXIS_LABEL: {self.TITLE_LABEL: ("", "")},
+                self.BKG_CBAR: {self.TITLE_LABEL: ("", "")},
+                self.VECT_CBAR: {self.TITLE_LABEL: ("", "")},
             },
         }
 
         self._setters[self.IMAGE_ANNOT_BOX] = self._setters[self.ANNOT_BOX]
+        self._setters[self.IMAGE_ANNOT_BOX].update({
+            self.BKG_CBAR: self.update_cbar_label,
+            self.VECT_CBAR: self.update_vcbar_label,
+        })
 
     @property
     def title_item(self):
@@ -775,6 +791,14 @@ class ImageParameterSetter(CommonParameterSetter):
     @property
     def legend_items(self):
         return []
+
+    @property
+    def colorbar(self):
+        return self.master.legend.axis
+
+    @property
+    def vcolorbar(self):
+        return self.master.vect_legend.axis
 
 class VectorPlot(pg.GraphicsObject):
 
