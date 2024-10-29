@@ -1141,7 +1141,7 @@ class BasicImagePlot(QWidget, OWComponent, SelectionGroupMixin,
             w = self.parent.vector_width
             th = np.asarray(v[:,0], dtype=float)
             v_mag = np.asarray(v[:,1], dtype=float)
-            wy = _shift(lsx)*2
+            wy = _shift(lsy)*2
             wx = _shift(lsx)*2
             if self.parent.v_bin == 0:
                 y = np.linspace(*lsy)[yindex[valid]]
