@@ -1577,7 +1577,6 @@ class OWHyper(OWWidget, SelectionOutputsMixin):
                                             label="", model = self.vector_pal_opts,
                                             callback=self._update_cbyval)
         self.v_colour_byval_select.setIconSize(QSize(64, 16))
-        self.v_colour_byval_select.setEnabled(False)
 
         self.v_scale_slider = gui.hSlider(self.vectorbox, self, 'vector_scale', label="Scale",
                                         minValue=1, maxValue=1000, step=10, createLabel=False,
@@ -1600,21 +1599,21 @@ class OWHyper(OWWidget, SelectionOutputsMixin):
 
     def update_vector_plot_interface(self):
         vector_params = ['vector_angle', 'vector_magnitude', 'vector_colour_index',
-                         'vector_scale', 'vector_width', 'vector_opacity']
+                         'vector_scale', 'vector_width', 'vector_opacity', 'v_bin']
         for i in vector_params:
             getattr(self.controls, i).setEnabled(self.show_vector_plot)
 
-        if self.vector_colour_index == 8:
-            self.v_colour_byval.setEnabled(True)
-            self.v_colour_byval_select.setEnabled(True)
+        if self.vector_colour_index == 8 and self.show_vector_plot:
+            self.controls.vcol_byval_index.setEnabled(True)
+            self.controls.vcol_byval_feat.setEnabled(True)
             if self.vcol_byval_feat is not None and self.show_vector_plot:
                 self.imageplot.vect_legend.setVisible(True)
                 self.imageplot.vect_legend.adapt_to_size()
             else:
                 self.imageplot.vect_legend.setVisible(False)
         else:
-            self.v_colour_byval.setEnabled(False)
-            self.v_colour_byval_select.setEnabled(False)
+            self.controls.vcol_byval_index.setEnabled(False)
+            self.controls.vcol_byval_feat.setEnabled(False)
             self.imageplot.vect_legend.setVisible(False)
 
     def enable_vector(self):
