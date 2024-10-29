@@ -467,6 +467,7 @@ class OWPolar(OWWidget, ConcurrentWidgetMixin):
     invert_angles = Setting(False, schema_only=True)
     average = Setting(False, schema_only=True)
     angles = ContextSetting(None)
+    spec_type = Setting(0)
     feats: List[Variable] = ContextSetting([])
 
     class Warning(OWWidget.Warning):
@@ -481,6 +482,9 @@ class OWPolar(OWWidget, ConcurrentWidgetMixin):
         # missingfeat = Msg("All inputs must have the selected feature")
         # renamed_variables = Msg("Variables with duplicated names have been renamed.")
         XYfeat = Msg("Selected feature(s) cannot be the same as XY selection")
+
+    class Information(OWWidget.Information):
+        meta_calc = Msg("Meta and Target variables are not transformed to absorptance during calculations")
 
     def __init__(self):
         super().__init__()
@@ -559,6 +563,14 @@ class OWPolar(OWWidget, ConcurrentWidgetMixin):
             callback=self._change_input, model=self.x_axis)
         gui.comboBox(xybox, self, 'map_y', searchable=True, label="Y Axis",
             callback=self._change_input, model=self.y_axis)
+
+        vbox.layout().addWidget(form)
+
+        specbox = gui.widgetBox(vbox, "Spectra Type",
+                                sizePolicy=(QSizePolicy.Minimum, QSizePolicy.Fixed))
+
+        self.spec_b1 = gui.radioButtons(specbox, self, 'spec_type', ['Absorptance', 'Absorbance', 'Transmittance'],
+                                        callback=self._process_spectype)
 
         vbox.layout().addWidget(form)
 
@@ -697,6 +709,9 @@ class OWPolar(OWWidget, ConcurrentWidgetMixin):
                 i.setDisabled(False)
             self._send_ind_angles()
 
+    def _process_spectype(self):
+        self.commit.deferred()
+
     def check_params(self):
         self.Warning.nofeat.clear()
         if self.feats is None or len(self.feats) == 0:
@@ -797,6 +812,7 @@ class OWPolar(OWWidget, ConcurrentWidgetMixin):
     def commit(self):
         self.cancel()
         self.check_params()
+        self.Information.meta_calc.clear()
         if len(self.Warning.active) > 0:
             return
 
@@ -817,6 +833,16 @@ class OWPolar(OWWidget, ConcurrentWidgetMixin):
         else:
             sorted_data = self.sorted_data
 
+        if self.spec_type != 0:
+            if self.spec_type == 1:
+                for i, j in enumerate(sorted_data):
+                    sorted_data[i].X = 1-np.power(10, j.X*-1)
+            elif self.spec_type == 2:
+                for i, j in enumerate(sorted_data):
+                    sorted_data[i].X = 1-j.X
+            if any(i not in sorted_data[0].domain.attributes for i in self.feats):
+                self.Information.meta_calc()
+
         self.start(run, sorted_data, list(self.feats), self.alpha, self.map_x,
                    self.map_y, self.invert_angles, list(self.polangles),
                    self.average, self.angles)
@@ -829,6 +855,13 @@ class OWPolar(OWWidget, ConcurrentWidgetMixin):
         if result.errorstate == 1:
             self.Warning.wrongdata()
         else:
+            if self.spec_type != 0:
+                if self.spec_type == 1:
+                    result.out.X = -np.log10(1-result.out.X)
+                    result.model.X = -np.log10(1-result.model.X)
+                elif self.spec_type == 2:
+                    result.out.X = 1-result.out.X
+                    result.model.X = 1-result.model.X
             self.Outputs.polar.send(result.out)
             self.Outputs.model.send(result.model)
 
