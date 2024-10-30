@@ -10,6 +10,7 @@ import numpy as np
 import pandas as pd
 from AnyQt.QtCore import QItemSelectionModel, QItemSelection, QItemSelectionRange
 from AnyQt.QtWidgets import QFormLayout, QWidget, QListView, QLabel, QSizePolicy
+from AnyQt.QtGui import QIntValidator
 from scipy.optimize import curve_fit
 
 
@@ -575,8 +576,10 @@ class OWPolar(OWWidget, ConcurrentWidgetMixin):
         vbox.layout().addWidget(form)
 
         pbox = gui.widgetBox(vbox, sizePolicy=(QSizePolicy.Minimum, QSizePolicy.Fixed))
-        gui.lineEdit(pbox, self, "alpha", "Alpha value",
-                                       callback=self._change_input, valueType=int)
+        gui.lineEdit(pbox, self, "alpha", u"TDM Tilt (\N{DEGREE SIGN})",
+                     callback=self._change_input, valueType=int,
+                     validator=QIntValidator(0, 90), tooltip= \
+                         "The angle (in degrees) between the long axis of the molecule and the transition dipole moment")
 
         gui.checkBox(pbox, self, 'invert_angles', label="Invert Angles",
                      callback=self._change_input)
