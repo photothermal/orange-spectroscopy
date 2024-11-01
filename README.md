@@ -3,7 +3,7 @@
 Orange toolbox for spectral data analysis
 =========================================
 
-This is an add-on for [Orange3](http://orange.biolab.si) for the analysis
+This is an add-on for [Orange3](https://orangedatamining.com/) for the analysis
 of spectral data.
 
 Installation
