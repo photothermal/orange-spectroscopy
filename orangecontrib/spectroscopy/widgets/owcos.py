@@ -1,19 +1,15 @@
 import numpy as np
 import pyqtgraph as pg
 import colorcet
-from typing import Optional, Union
+from AnyQt.QtCore import QRectF, Qt
 
 from pyqtgraph import LabelItem
 
 import Orange.data
-from Orange.data import Table, Variable
 from Orange.widgets.visualize.utils.customizableplot import CommonParameterSetter, Updater
 from Orange.widgets.visualize.utils.plotutils import PlotItem, GraphicsView, AxisItem
 from Orange.widgets.widget import OWWidget, Msg, Input, Output
-# from Orange.widgets.utils.concurrent import TaskState, ConcurrentWidgetMixin
 from Orange.widgets import gui, settings
-
-from AnyQt.QtCore import QRectF, Qt
 
 from orangewidget.utils import saveplot
 from orangewidget.utils.visual_settings_dlg import VisualSettingsDialog
