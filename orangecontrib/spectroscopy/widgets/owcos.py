@@ -52,29 +52,6 @@ def calc_cos(table1, table2):
     # TODO handle non continuous data (after cut widget)
 
 
-# class to multithread the isocurve calculation
-# def run(data: Table,
-#         variable: Optional[Union[Variable, bool]],
-#         feature_name: str,
-#         remove_redundant_inst: bool,
-#         state: TaskState
-#         ) -> Table:
-#     if not data:
-#         return None
-#
-#     def callback(i: float, status=""):
-#         state.set_progress_value(i * 100)
-#         if status:
-#             state.set_status(status)
-#         if state.is_interruption_requested():
-#             raise Exception
-#
-#     # the isocurve calculation needs to happen here
-#     return Table.transpose(data, variable, feature_name=feature_name,
-#                            remove_redundant_inst=remove_redundant_inst,
- #                           progress_callback=callback)
-
-
 class ParameterSetter(CommonParameterSetter):
     LEFT_AXIS_LABEL, TOP_AXIS_LABEL = "Left axis title", "Top axis title"
     FIGTITLE_LABEL_SIZE = "Title font size"
