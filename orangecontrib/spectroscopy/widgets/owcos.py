@@ -41,11 +41,9 @@ def calc_cos(table1, table2):
     sync = series1.T @ series2 / (len(series1) - 1)
 
     # Hilbert-Noda transformation matrix
-    hn = np.zeros((len(series1), len(series1)))
-    for i in range(len(series1)):
-        for j in range(len(series1)):
-            if i != j:
-                hn[i, j] = 1 / np.pi / (j - i)
+    i, j = np.ogrid[:len(series1), :len(series1)]
+    with np.errstate(divide='ignore'):
+        hn2 = np.where(i != j, 1 / (np.pi * (j - i)), 0)
 
     # asynchronous correlation
     asyn = series1.T @ hn @ series2 / (len(series1) - 1)
