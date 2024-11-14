@@ -417,7 +417,11 @@ class OWCos(OWWidget):
             self.cbarCOS.set_range(-1 * np.nanmax(np.absolute(cosmat)), np.nanmax(np.absolute(cosmat)))
             self.cbarCOS.set_colors(np.array(colorcet.diverging_bwr_40_95_c42) * 255)
 
-            left_indices = np.linspace(0, len(leftSP)-1, 100, dtype=int)
+            if len(leftSP) > 100:
+                left_indices = np.linspace(0, len(leftSP)-1, 100, dtype=int)
+            else:
+                left_indices = np.linspace(0, len(leftSP)-1, len(leftSP), dtype=int)
+
             for s in leftSP[left_indices]:
                 pt = pg.PlotCurveItem(s, leftSPwn, pen=pg.mkPen(color=(50, 50, 50), width=0.5))
                 self.left_plot.addItem(pt, ignoreBounds=True)
@@ -427,7 +431,11 @@ class OWCos(OWWidget):
 
             self.left_plot.setXRange(np.min(leftSP), np.max(leftSP))
 
-            top_indices = np.linspace(0, len(topSP)-1, 100, dtype=int)
+            if len(topSP) > 100:
+                top_indices = np.linspace(0, len(topSP)-1, 100, dtype=int)
+            else:
+                top_indices = np.linspace(0, len(topSP)-1, len(topSP), dtype=int)
+
             for s in topSP[top_indices]:
                 pt = pg.PlotCurveItem(topSPwn, s, pen=pg.mkPen(color=(50, 50, 50), width=0.5))
                 self.top_plot.addItem(pt, ignoreBounds=True)
@@ -464,4 +472,6 @@ if __name__ == "__main__":  # pragma: no cover
     # pylint: disable=ungrouped-imports
     from Orange.widgets.utils.widgetpreview import WidgetPreview
 
-    WidgetPreview(OWCos).run(set_data1=Orange.data.Table("collagen"), set_data2=None)
+    data1 = Orange.data.Table("collagen")[100:230]
+    data2 = Orange.data.Table("collagen")[600:730]
+    WidgetPreview(OWCos).run(set_data1=data1, set_data2=data2)
