@@ -238,6 +238,12 @@ class TestPerkinElmerReader(unittest.TestCase):
         self.assertEqual(min(getx(d)), 750.0)
         self.assertEqual(max(getx(d)), 4000.0)
 
+    def test_map_reader_coordinates(self):
+        d = Orange.data.Table("perkinelmer/4x4_pixel_PE_image.fsm")
+        self.assertEqual(d.metas[1][0], 17530.000000993412)
+        self.assertEqual(d.metas[1][1], 2749.0000029802322)
+        self.assertEqual(d.metas[2][0],  17579.999999006588)
+        self.assertEqual(d.metas[2][1], 2749.0000029802322)
 
 class TestAgilentReader(unittest.TestCase):
 
