@@ -15,7 +15,7 @@ from orangewidget.utils import saveplot
 from orangewidget.utils.visual_settings_dlg import VisualSettingsDialog
 from orangecontrib.spectroscopy.data import getx
 from orangecontrib.spectroscopy.widgets.owhyper import ImageColorLegend
-from orangecontrib.spectroscopy.widgets.owspectra import InteractiveViewBox, PlotCurvesItem
+from orangecontrib.spectroscopy.widgets.owspectra import InteractiveViewBox
 from orangecontrib.spectroscopy.widgets.gui import float_to_str_decimals as strdec, pixel_decimals
 
 
