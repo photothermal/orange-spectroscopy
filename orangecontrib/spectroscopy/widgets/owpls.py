@@ -28,7 +28,7 @@ class OWPLS(OWBaseLearner):
     class Warning(OWBaseLearner.Warning):
         sparse_data = Msg('Sparse input data: default preprocessing is to scale it.')
         deprecated = Msg('The PLS widget is deprecated and will be removed in the future.\n'
-                         'You can use a PLS widget in the core Orange instead.')
+                         'Please use the PLS widget from the Model category instead.')
 
     n_components = Setting(2)
     max_iter = Setting(500)
