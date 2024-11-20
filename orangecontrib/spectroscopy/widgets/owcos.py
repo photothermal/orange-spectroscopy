@@ -41,40 +41,17 @@ def calc_cos(table1, table2):
     sync = series1.T @ series2 / (len(series1) - 1)
 
     # Hilbert-Noda transformation matrix
-    hn = np.zeros((len(series1), len(series1)))
-    for i in range(len(series1)):
-        for j in range(len(series1)):
-            if i != j:
-                hn[i, j] = 1 / np.pi / (j - i)
+    i, j = np.ogrid[:len(series1), :len(series1)]
+
+    # TODO - We could use the code below after allowing numpy>2.0
+    # with np.errstate(divide='ignore'):
+    hn = np.where(i != j, 1 / (np.pi * (j - i)), 0)
 
     # asynchronous correlation
     asyn = series1.T @ hn @ series2 / (len(series1) - 1)
 
     return sync, asyn, series1, series2, getx(table1), getx(table2)
     # TODO handle non continuous data (after cut widget)
-
-
-# class to multithread the isocurve calculation
-# def run(data: Table,
-#         variable: Optional[Union[Variable, bool]],
-#         feature_name: str,
-#         remove_redundant_inst: bool,
-#         state: TaskState
-#         ) -> Table:
-#     if not data:
-#         return None
-#
-#     def callback(i: float, status=""):
-#         state.set_progress_value(i * 100)
-#         if status:
-#             state.set_status(status)
-#         if state.is_interruption_requested():
-#             raise Exception
-#
-#     # the isocurve calculation needs to happen here
-#     return Table.transpose(data, variable, feature_name=feature_name,
-#                            remove_redundant_inst=remove_redundant_inst,
- #                           progress_callback=callback)
 
 
 class ParameterSetter(CommonParameterSetter):
@@ -193,7 +170,7 @@ class OWCos(OWWidget):
 
     settingsHandler = settings.DomainContextHandler()
     selector = settings.Setting(0)
-    isonum = settings.Setting(0)
+    isonum = settings.Setting(5)
     visual_settings = settings.Setting({}, schema_only=True)
 
     # autocommit = settings.Setting(True)
@@ -442,17 +419,27 @@ class OWCos(OWWidget):
             self.cbarCOS.set_range(-1 * np.nanmax(np.absolute(cosmat)), np.nanmax(np.absolute(cosmat)))
             self.cbarCOS.set_colors(np.array(colorcet.diverging_bwr_40_95_c42) * 255)
 
-            for s in leftSP:
-                self.left_plot.plot(s, leftSPwn, pen=pg.mkPen(color=(50, 50, 50), width=0.5))
+            left_indices = np.linspace(0, len(leftSP)-1, min(100, len(leftSP)), dtype=int)
+
+            for s in leftSP[left_indices]:
+                pt = pg.PlotCurveItem(s, leftSPwn, pen=pg.mkPen(color=(50, 50, 50), width=0.5))
+                self.left_plot.addItem(pt, ignoreBounds=True)
 
             self.left_plot.plot(leftSP.mean(axis=0), leftSPwn, pen=p)
             self.left_plot.addItem(self.left_hLine)
 
-            for s in topSP:
-                self.top_plot.plot(topSPwn, s, pen=pg.mkPen(color=(50, 50, 50), width=0.5))
+            self.left_plot.setXRange(np.min(leftSP), np.max(leftSP))
+
+            top_indices = np.linspace(0, len(topSP)-1, min(100, len(topSP)), dtype=int)
+
+            for s in topSP[top_indices]:
+                pt = pg.PlotCurveItem(topSPwn, s, pen=pg.mkPen(color=(50, 50, 50), width=0.5))
+                self.top_plot.addItem(pt, ignoreBounds=True)
 
             self.top_plot.plot(topSPwn, topSP.mean(axis=0), pen=p)
             self.top_plot.addItem(self.top_vLine)
+
+            self.top_plot.setYRange(np.min(topSP), np.max(topSP))
 
     def hideitems_for_saving(self):
         self.hLine.hide()
@@ -481,4 +468,6 @@ if __name__ == "__main__":  # pragma: no cover
     # pylint: disable=ungrouped-imports
     from Orange.widgets.utils.widgetpreview import WidgetPreview
 
-    WidgetPreview(OWCos).run(set_data1=Orange.data.Table("collagen"), set_data2=None)
+    data1 = Orange.data.Table("collagen")[100:230]
+    data2 = Orange.data.Table("collagen")[600:730]
+    WidgetPreview(OWCos).run(set_data1=data1, set_data2=data2)
