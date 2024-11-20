@@ -419,10 +419,7 @@ class OWCos(OWWidget):
             self.cbarCOS.set_range(-1 * np.nanmax(np.absolute(cosmat)), np.nanmax(np.absolute(cosmat)))
             self.cbarCOS.set_colors(np.array(colorcet.diverging_bwr_40_95_c42) * 255)
 
-            if len(leftSP) > 100:
-                left_indices = np.linspace(0, len(leftSP)-1, 100, dtype=int)
-            else:
-                left_indices = np.linspace(0, len(leftSP)-1, len(leftSP), dtype=int)
+            left_indices = np.linspace(0, len(leftSP)-1, min(100, len(leftSP)), dtype=int)
 
             for s in leftSP[left_indices]:
                 pt = pg.PlotCurveItem(s, leftSPwn, pen=pg.mkPen(color=(50, 50, 50), width=0.5))
@@ -433,10 +430,7 @@ class OWCos(OWWidget):
 
             self.left_plot.setXRange(np.min(leftSP), np.max(leftSP))
 
-            if len(topSP) > 100:
-                top_indices = np.linspace(0, len(topSP)-1, 100, dtype=int)
-            else:
-                top_indices = np.linspace(0, len(topSP)-1, len(topSP), dtype=int)
+            top_indices = np.linspace(0, len(topSP)-1, min(100, len(topSP)), dtype=int)
 
             for s in topSP[top_indices]:
                 pt = pg.PlotCurveItem(topSPwn, s, pen=pg.mkPen(color=(50, 50, 50), width=0.5))
