@@ -15,9 +15,8 @@ class PerkinElmerReader(FileFormat, SpectralFileFormat):
     DESCRIPTION = "Perkin Elmer"
 
     def read_sp(self):
-        f = open(self.filename, "rb")
-        data = f.read()
-        f.close()
+        with open(self.filename, "rb") as f:
+            data = f.read()
 
         reader = BlockReader(data)
 
@@ -70,7 +69,7 @@ class PerkinElmerReader(FileFormat, SpectralFileFormat):
                                                format="<Hi",
                                                expect_tuple=True)
 
-            if block_id in decoders.keys():
+            if block_id in decoders:
                 decoded = decoders[block_id](reader.peek(block_size))
 
                 if isinstance(decoded, dict):
@@ -96,9 +95,8 @@ class PerkinElmerReader(FileFormat, SpectralFileFormat):
         return wavenumbers, datavals, meta_data
 
     def read_fsm(self):
-        f = open(self.filename, "rb")
-        data = f.read()
-        f.close()
+        with open(self.filename, "rb") as f:
+            data = f.read()
 
         reader = BlockReader(data)
 
@@ -148,13 +146,14 @@ class PerkinElmerReader(FileFormat, SpectralFileFormat):
         elif os.path.splitext(self.filename)[1].lower() == ".fsm":
             intensities, wn, m = self.read_fsm()
 
+            atts = m.attributes
             # TODO position calculation should be done by a helper function that accepts units as well
-            xpositions = m.attributes['x_init'] + m.attributes['x_delta'] * np.arange(m.attributes['n_x'])
-            ypositions = m.attributes['y_init'] + m.attributes['y_delta'] * np.arange(m.attributes['n_y'])
+            xpositions = atts['x_init'] + atts['x_delta'] * np.arange(atts['n_x'])
+            ypositions = atts['y_init'] + atts['y_delta'] * np.arange(atts['n_y'])
 
             # TODO this is not nice - we need new helpers to build the coordinates
-            y_loc = np.repeat(np.arange(m.attributes['n_y']), m.attributes['n_x'])
-            x_loc = np.tile(np.arange(m.attributes['n_x']), m.attributes['n_y'])
+            y_loc = np.repeat(np.arange(atts['n_y']), atts['n_x'])
+            x_loc = np.tile(np.arange(atts['n_x']), atts['n_y'])
 
             features, final_data, locs_table = _spectra_from_image_2d(intensities, wn,
                                                                       xpositions[x_loc],
