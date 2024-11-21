@@ -240,10 +240,24 @@ class TestPerkinElmerReader(unittest.TestCase):
 
     def test_map_reader_coordinates(self):
         d = Orange.data.Table("perkinelmer/4x4_pixel_PE_image.fsm")
-        self.assertEqual(d.metas[1][0], 17530.000000993412)
-        self.assertEqual(d.metas[1][1], 2749.0000029802322)
-        self.assertEqual(d.metas[2][0],  17579.999999006588)
-        self.assertEqual(d.metas[2][1], 2749.0000029802322)
+        map_x = np.array([17480, 17530, 17579,
+                          17629, 17480, 17530,
+                          17579, 17629, 17480,
+                          17530, 17579, 17629,
+                          17480, 17530, 17579,
+                          17629])
+        
+        map_y = np.array([2749, 2749, 2749,
+                          2749, 2799, 2799,
+                          2799, 2799, 2848,
+                          2848, 2848, 2848,
+                          2898, 2898, 2898,
+                          2898,])
+        
+        for k, l, m, n in zip(d.metas[:, 0], map_x, d.metas[:, 1], map_y):
+            self.assertAlmostEqual(int(k), l, places=int)
+            self.assertAlmostEqual(int(m), n, places=int)
+
 
 class TestAgilentReader(unittest.TestCase):
 
