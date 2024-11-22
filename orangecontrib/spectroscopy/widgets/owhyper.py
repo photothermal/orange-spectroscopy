@@ -6,7 +6,7 @@ from xml.sax.saxutils import escape
 
 from AnyQt.QtWidgets import QWidget, QPushButton, \
     QGridLayout, QFormLayout, QAction, QVBoxLayout, QWidgetAction, QSplitter, \
-    QToolTip, QGraphicsRectItem
+    QToolTip, QGraphicsRectItem, QLabel
 from AnyQt.QtGui import QColor, QKeySequence, QPainter, QBrush, QStandardItemModel, \
     QStandardItem, QLinearGradient, QPixmap, QIcon, QPen
 
@@ -1302,6 +1302,29 @@ class CurvePlotHyper(CurvePlot):
     viewtype = Setting(AVERAGE)  # average view by default
 
 
+def create_gridbox(widget, box=False, add_space=False):
+    grid = QGridLayout()
+    grid.setColumnMinimumWidth(0, 50)
+    grid.setColumnStretch(1, 1)
+    b = gui.widgetBox(widget, box=box, orientation=grid)
+    if not box:
+        if add_space:
+            b.setContentsMargins(8, 4, 8, 4)
+        else:
+            b.setContentsMargins(0, 0, 0, 0)
+    # This must come after calling widgetBox, since widgetBox overrides it
+    grid.setVerticalSpacing(8)
+    return b
+
+
+def grid_add_labelled_row(grid, label, widget):
+    if not isinstance(grid, QGridLayout):
+        grid = grid.layout()
+    row = grid.rowCount()
+    grid.addWidget(QLabel(label), row, 0)
+    grid.addWidget(widget, row, 1)
+
+
 class OWHyper(OWWidget, SelectionOutputsMixin):
     name = "HyperSpectra"
 
@@ -1427,7 +1450,6 @@ class OWHyper(OWWidget, SelectionOutputsMixin):
             self.box_values_spectra, self, "integration_method",
             items=(a.name for a in self.integration_methods),
             callback=self._change_integral_type)
-        gui.rubber(self.controlArea)
 
         gui.appendRadioButton(rbox, "Use feature")
 
@@ -1460,9 +1482,6 @@ class OWHyper(OWWidget, SelectionOutputsMixin):
             self.box_values_RGB_feature, self, "rgb_blue_value",
             contentsLength=12, searchable=True,
             callback=self.update_rgb_value, model=self.rgb_value_model)
-
-        self.cb_vector = gui.checkBox(rbox, self, "show_vector_plot", label="Show vector plot",
-                                      callback=self.enable_vector)
 
         splitter = QSplitter(self)
         splitter.setOrientation(Qt.Vertical)
@@ -1527,6 +1546,8 @@ class OWHyper(OWWidget, SelectionOutputsMixin):
 
         self._setup_plot_parameters()
 
+        gui.rubber(self.controlArea)
+
     def _setup_plot_parameters(self):
         parts_from_spectra = [SpectraParameterSetter.ANNOT_BOX,
                               SpectraParameterSetter.LABELS_BOX,
@@ -1539,7 +1560,13 @@ class OWHyper(OWWidget, SelectionOutputsMixin):
 
     def setup_vector_plot_controls(self):
 
-        self.vectorbox = gui.widgetBox(self.controlArea, box=True)
+        mainbox = gui.widgetBox(self.controlArea, box="Vector plot")
+
+        self.cb_vector = gui.checkBox(mainbox, self, "show_vector_plot",
+                                      label="Show vector plot",
+                                      callback=self.enable_vector)
+
+        self.vectorbox = gui.widgetBox(mainbox, box=False)
 
         self.vector_opts = DomainModel(DomainModel.SEPARATED,
                                        valid_types=DomainModel.PRIMITIVE, placeholder='None')
@@ -1556,46 +1583,64 @@ class OWHyper(OWWidget, SelectionOutputsMixin):
         self.vcol_byval_feat = None
         self.colour_opts = vector_colour
 
-        self.v_angle_select = gui.comboBox(self.vectorbox, self, 'vector_angle', searchable=True,
-                                         label="Vector Angle", model=self.vector_opts,
-                                         callback=self._update_vector_params)
+        gb = create_gridbox(self.vectorbox, box=False)
 
-        self.v_mag_select = gui.comboBox(self.vectorbox, self, 'vector_magnitude', searchable=True,
-                                       label="Vector Magnitude", model=self.vector_opts,
-                                       callback=self._update_vector_params)
+        v_angle_select = gui.comboBox(None, self, 'vector_angle', searchable=True,
+                                      label="Vector Angle", model=self.vector_opts,
+                                      contentsLength=10,
+                                      callback=self._update_vector_params)
+        grid_add_labelled_row(gb, "Angle: ", v_angle_select)
 
-        self.v_colour_select = gui.comboBox(self.vectorbox, self, 'vector_colour_index',
-                                            label="Vector Colour", model=self.vector_col_opts,
-                                            callback=self._update_vector)
+        v_mag_select = gui.comboBox(None, self, 'vector_magnitude', searchable=True,
+                                    label="Vector Magnitude", model=self.vector_opts,
+                                    contentsLength=10,
+                                    callback=self._update_vector_params)
+        grid_add_labelled_row(gb, "Magnitude: ", v_mag_select)
 
-        self.v_colour_byval = gui.comboBox(self.vectorbox, self, 'vcol_byval_feat',
-                                            label="Vector Colour by Feature",
-                                            model=self.vector_cbyf_opts,
-                                            callback=self._update_cbyval)
+        v_bin_select = gui.comboBox(None, self, 'v_bin', label="Pixel Binning",
+                                    model=self.vector_bin_opts,
+                                    contentsLength=10,
+                                    callback=self._update_binsize)
+        grid_add_labelled_row(gb, "Binning: ", v_bin_select)
 
-        self.v_colour_byval_select = gui.comboBox(self.vectorbox, self, 'vcol_byval_index',
-                                            label="", model = self.vector_pal_opts,
-                                            callback=self._update_cbyval)
-        self.v_colour_byval_select.setIconSize(QSize(64, 16))
+        v_colour_select = gui.comboBox(None, self, 'vector_colour_index',
+                                       label="Vector Colour", model=self.vector_col_opts,
+                                       contentsLength=10,
+                                       callback=self._update_vector)
+        grid_add_labelled_row(gb, "Color: ", v_colour_select)
 
-        self.v_scale_slider = gui.hSlider(self.vectorbox, self, 'vector_scale', label="Scale",
-                                        minValue=1, maxValue=1000, step=10, createLabel=False,
-                                        callback=self._update_vector)
+        v_colour_byval = gui.comboBox(None, self, 'vcol_byval_feat',
+                                      label="Vector Colour by Feature",
+                                      model=self.vector_cbyf_opts,
+                                      contentsLength=10,
+                                      callback=self._update_cbyval)
+        grid_add_labelled_row(gb, "Feature: ", v_colour_byval)
 
-        self.v_width_slider = gui.hSlider(self.vectorbox, self, 'vector_width', label="Width",
-                                        minValue=1, maxValue=20, step=1, createLabel=False,
-                                        callback=self._update_vector)
+        v_colour_byval_select = gui.comboBox(None, self, 'vcol_byval_index',
+                                             label="", model=self.vector_pal_opts,
+                                             contentsLength=5,
+                                             callback=self._update_cbyval)
+        v_colour_byval_select.setIconSize(QSize(64, 16))
+        grid_add_labelled_row(gb, "Palette: ", v_colour_byval_select)
 
-        self.v_opacity_slider = gui.hSlider(self.vectorbox, self, 'vector_opacity', label="Opacity",
-                                            minValue=0, maxValue=255, step=5, createLabel=False,
-                                            callback=self._update_vector)
+        gb = create_gridbox(self.vectorbox, box=False)
 
-        self.v_bin_select = gui.comboBox(self.vectorbox, self, 'v_bin', label = "Pixel Binning",
-                                         model = self.vector_bin_opts,
-                                         callback = self._update_binsize)
+        v_scale_slider = gui.hSlider(None, self, 'vector_scale', label="Scale",
+                                     minValue=1, maxValue=1000, step=10, createLabel=False,
+                                     callback=self._update_vector)
+        grid_add_labelled_row(gb, "Scale: ", v_scale_slider)
+
+        v_width_slider = gui.hSlider(None, self, 'vector_width', label="Width",
+                                     minValue=1, maxValue=20, step=1, createLabel=False,
+                                     callback=self._update_vector)
+        grid_add_labelled_row(gb, "Width: ", v_width_slider)
+
+        v_opacity_slider = gui.hSlider(None, self, 'vector_opacity', label="Opacity",
+                                       minValue=0, maxValue=255, step=5, createLabel=False,
+                                       callback=self._update_vector)
+        grid_add_labelled_row(gb, "Opacity: ", v_opacity_slider)
 
         self.enable_vector()
-
 
     def update_vector_plot_interface(self):
         vector_params = ['vector_angle', 'vector_magnitude', 'vector_colour_index',
@@ -1771,16 +1816,19 @@ class OWHyper(OWWidget, SelectionOutputsMixin):
             self.vector_magnitude = self.vector_angle = self.vcol_byval_feat = None
 
     def setup_visible_image_controls(self):
-        self.visbox = gui.widgetBox(self.controlArea, True)
+        self.visbox = gui.widgetBox(self.controlArea, box="Visible image")
 
         gui.checkBox(
             self.visbox, self, 'show_visible_image',
             label='Show visible image',
             callback=lambda: (self.update_visible_image_interface(), self.update_visible_image()))
 
+        self.visboxhide = gui.widgetBox(self.visbox, box=False)
+        self.visboxhide.hide()
+
         self.visible_image_model = VisibleImageListModel()
         gui.comboBox(
-            self.visbox, self, 'visible_image',
+            self.visboxhide, self, 'visible_image',
             model=self.visible_image_model,
             callback=self.update_visible_image)
 
@@ -1791,13 +1839,13 @@ class OWHyper(OWWidget, SelectionOutputsMixin):
             ('Difference', QPainter.CompositionMode_Difference)
         ])
         gui.comboBox(
-            self.visbox, self, 'visible_image_composition', label='Composition mode:',
+            self.visboxhide, self, 'visible_image_composition', label='Composition mode:',
             model=PyListModel(self.visual_image_composition_modes.keys()),
             callback=self.update_visible_image_composition_mode
         )
 
         gui.hSlider(
-            self.visbox, self, 'visible_image_opacity', label='Opacity:',
+            self.visboxhide, self, 'visible_image_opacity', label='Opacity:',
             minValue=0, maxValue=255, step=10, createLabel=False,
             callback=self.update_visible_image_opacity
         )
@@ -1808,6 +1856,7 @@ class OWHyper(OWWidget, SelectionOutputsMixin):
 
     def update_visible_image_interface(self):
         controlled = ['visible_image', 'visible_image_composition', 'visible_image_opacity']
+        self.visboxhide.setVisible(self.show_visible_image)
         for c in controlled:
             getattr(self.controls, c).setEnabled(self.show_visible_image)
 
