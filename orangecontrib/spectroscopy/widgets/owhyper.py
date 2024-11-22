@@ -324,7 +324,8 @@ class ImageColorSettingMixin:
         box = gui.vBox(self)
         box.setContentsMargins(0, 0, 0, 5)
         self.color_cb = gui.comboBox(box, self, "palette_index", label="Color:",
-                                     labelWidth=50, orientation=Qt.Horizontal)
+                                     labelWidth=50, orientation=Qt.Horizontal,
+                                     contentsLength=10)
         self.color_cb.setIconSize(QSize(64, 16))
         palettes = _color_palettes
         model = color_palette_model(palettes, self.color_cb.iconSize())
@@ -347,19 +348,21 @@ class ImageColorSettingMixin:
 
         self._level_low_le = lineEditDecimalOrNone(self, self, "level_low", callback=limit_changed)
         self._level_low_le.validator().setDefault(0)
+        self._level_low_le.sizeHintFactor = 0.5
         form.addRow("Low limit:", self._level_low_le)
 
         self._level_high_le = lineEditDecimalOrNone(self, self, "level_high", callback=limit_changed)
         self._level_high_le.validator().setDefault(1)
+        self._level_high_le.sizeHintFactor = 0.5
         form.addRow("High limit:", self._level_high_le)
 
         self._threshold_low_slider = lowslider = gui.hSlider(
             box, self, "threshold_low", minValue=0.0, maxValue=1.0,
-            step=0.05, ticks=True, intOnly=False,
+            step=0.05, intOnly=False,
             createLabel=False, callback=self.update_levels)
         self._threshold_high_slider = highslider = gui.hSlider(
             box, self, "threshold_high", minValue=0.0, maxValue=1.0,
-            step=0.05, ticks=True, intOnly=False,
+            step=0.05, intOnly=False,
             createLabel=False, callback=self.update_levels)
 
         form.addRow("Low:", lowslider)
@@ -1177,7 +1180,11 @@ class OWHyper(OWWidget, SelectionOutputsMixin):
         super().__init__()
         SelectionOutputsMixin.__init__(self)
 
+        iabox = gui.widgetBox(self.controlArea, "Image axes")
+
         dbox = gui.widgetBox(self.controlArea, "Image values")
+
+        icbox = gui.widgetBox(self.controlArea, "Image colors")
 
         rbox = gui.radioButtons(
             dbox, self, "value_type", callback=self._change_integration)
@@ -1228,6 +1235,10 @@ class OWHyper(OWWidget, SelectionOutputsMixin):
         splitter.setOrientation(Qt.Vertical)
         self.imageplot = ImagePlot(self)
         self.imageplot.selection_changed.connect(self.output_image_selection)
+
+        # add image settings to the main panne after ImagePlot.__init__
+        iabox.layout().addWidget(self.imageplot.axes_settings_box)
+        icbox.layout().addWidget(self.imageplot.color_settings_box)
 
         # do not save visible image (a complex structure as a setting;
         # only save its name)
