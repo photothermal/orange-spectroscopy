@@ -1491,6 +1491,10 @@ class OWHyper(OWWidget, SelectionOutputsMixin):
         iabox.layout().addWidget(self.imageplot.axes_settings_box)
         icbox.layout().addWidget(self.imageplot.color_settings_box)
 
+        # add image settings to the main panne after ImagePlot.__init__
+        iabox.layout().addWidget(self.imageplot.axes_settings_box)
+        icbox.layout().addWidget(self.imageplot.color_settings_box)
+
         self.data = None
         self.setup_vector_plot_controls()
 
