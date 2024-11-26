@@ -321,6 +321,335 @@ def vector_colour_model(colours):
         model.appendRow([item])
     return model
 
+def circular_mean(degs):
+    sin = np.nansum(np.sin(np.radians(degs*2)))
+    cos = np.nansum(np.cos(np.radians(degs*2)))
+    return np.arctan2(sin, cos)/2
+
+class VectorSettingMixin:
+    show_vector_plot = Setting(False)
+    vector_angle = ContextSetting(None)
+    vector_magnitude = ContextSetting(None)
+    vector_colour_index = Setting(0)
+    vcol_byval_index = Setting(0)
+    vcol_byval_feat = ContextSetting(None)
+    vector_scale = Setting(1)
+    vector_width = Setting(1)
+    vector_opacity = Setting(255)
+    v_bin = Setting(0)
+
+    def setup_vector_plot_controls(self):
+
+        box = gui.vBox(self)
+
+        self.cb_vector = gui.checkBox(box, self, "show_vector_plot",
+                                      label="Show vector plot",
+                                      callback=self.enable_vector)
+
+        self.vectorbox = gui.widgetBox(box, box=False)
+
+        self.vector_opts = DomainModel(DomainModel.SEPARATED,
+                                       valid_types=DomainModel.PRIMITIVE, placeholder='None')
+
+        self.vector_cbyf_opts = DomainModel(DomainModel.SEPARATED,
+                                            valid_types=(ContinuousVariable,), placeholder='None')
+
+        self.vector_col_opts = vector_colour_model(vector_colour)
+        self.vector_pal_opts = color_palette_model(_color_palettes, (QSize(64, 16)))
+        self.vector_bin_opts = vector_colour_model(bins)
+
+        self.vector_angle = None
+        self.vector_magnitude = None
+        self.vcol_byval_feat = None
+        self.colour_opts = vector_colour
+
+        gb = create_gridbox(self.vectorbox, box=False)
+
+        v_angle_select = gui.comboBox(None, self, 'vector_angle', searchable=True,
+                                      label="Vector Angle", model=self.vector_opts,
+                                      contentsLength=10,
+                                      callback=self._update_vector_params)
+        grid_add_labelled_row(gb, "Angle: ", v_angle_select)
+
+        v_mag_select = gui.comboBox(None, self, 'vector_magnitude', searchable=True,
+                                    label="Vector Magnitude", model=self.vector_opts,
+                                    contentsLength=10,
+                                    callback=self._update_vector_params)
+        grid_add_labelled_row(gb, "Magnitude: ", v_mag_select)
+
+        v_bin_select = gui.comboBox(None, self, 'v_bin', label="Pixel Binning",
+                                    model=self.vector_bin_opts,
+                                    contentsLength=10,
+                                    callback=self._update_binsize)
+        grid_add_labelled_row(gb, "Binning: ", v_bin_select)
+
+        v_colour_select = gui.comboBox(None, self, 'vector_colour_index',
+                                       label="Vector Colour", model=self.vector_col_opts,
+                                       contentsLength=10,
+                                       callback=self._update_vector)
+        grid_add_labelled_row(gb, "Color: ", v_colour_select)
+
+        v_colour_byval = gui.comboBox(None, self, 'vcol_byval_feat',
+                                      label="Vector Colour by Feature",
+                                      model=self.vector_cbyf_opts,
+                                      contentsLength=10,
+                                      callback=self._update_cbyval)
+        grid_add_labelled_row(gb, "Feature: ", v_colour_byval)
+
+        v_colour_byval_select = gui.comboBox(None, self, 'vcol_byval_index',
+                                             label="", model=self.vector_pal_opts,
+                                             contentsLength=5,
+                                             callback=self._update_cbyval)
+        v_colour_byval_select.setIconSize(QSize(64, 16))
+        grid_add_labelled_row(gb, "Palette: ", v_colour_byval_select)
+
+        gb = create_gridbox(self.vectorbox, box=False)
+
+        v_scale_slider = gui.hSlider(None, self, 'vector_scale', label="Scale",
+                                     minValue=1, maxValue=1000, step=10, createLabel=False,
+                                     callback=self._update_vector)
+        grid_add_labelled_row(gb, "Scale: ", v_scale_slider)
+
+        v_width_slider = gui.hSlider(None, self, 'vector_width', label="Width",
+                                     minValue=1, maxValue=20, step=1, createLabel=False,
+                                     callback=self._update_vector)
+        grid_add_labelled_row(gb, "Width: ", v_width_slider)
+
+        v_opacity_slider = gui.hSlider(None, self, 'vector_opacity', label="Opacity",
+                                       minValue=0, maxValue=255, step=5, createLabel=False,
+                                       callback=self._update_vector)
+        grid_add_labelled_row(gb, "Opacity: ", v_opacity_slider)
+
+        self.vectorbox.setVisible(self.show_vector_plot)
+        self.update_vector_plot_interface()
+        
+        return box
+
+    def update_vector_plot_interface(self):
+        vector_params = ['vector_angle', 'vector_magnitude', 'vector_colour_index',
+                         'vector_scale', 'vector_width', 'vector_opacity', 'v_bin']
+        for i in vector_params:
+            getattr(self.controls, i).setEnabled(self.show_vector_plot)
+
+        if self.vector_colour_index == 8 and self.show_vector_plot:
+            self.controls.vcol_byval_index.setEnabled(True)
+            self.controls.vcol_byval_feat.setEnabled(True)
+            if self.vcol_byval_feat is not None and self.show_vector_plot:
+                self.vect_legend.setVisible(True)
+                self.vect_legend.adapt_to_size()
+            else:
+                self.vect_legend.setVisible(False)
+        else:
+            self.controls.vcol_byval_index.setEnabled(False)
+            self.controls.vcol_byval_feat.setEnabled(False)
+            self.vect_legend.setVisible(False)
+
+    def enable_vector(self):
+        self.vectorbox.setVisible(self.show_vector_plot)
+        self._update_vector()
+
+    def _update_vector(self):
+        self.update_vector_plot_interface()
+        self.update_vectors()
+
+    def _update_vector_params(self):
+        self.update_binsize()
+        self._update_vector()
+
+    def _update_cbyval(self):
+        self.cols = None
+        self._update_vector()
+
+    def _update_binsize(self):
+        self.v_bin_change = 1
+        self.cols = None
+        self.update_binsize()
+
+    def init_vector_plot(self, data):
+        domain = data.domain if data is not None else None
+        self.vector_opts.set_domain(domain)
+        self.vector_cbyf_opts.set_domain(domain)
+
+        # initialize values so that the combo boxes are not in invalid states
+        if self.vector_opts:
+            # TODO here we could instead set good default values if available
+            self.vector_magnitude = self.vector_angle = self.vcol_byval_feat = None
+        else:
+            self.vector_magnitude = self.vector_angle = self.vcol_byval_feat = None
+
+class VectorMixin:
+
+    def __init__(self):
+        self.a = None
+        self.th = None
+        self.cols = None
+        self.new_xs = None
+        self.new_ys = None
+        self.v_bin_change = 0
+
+    def update_vectors(self):
+        v = self.get_vector_data()
+        if self.lsx is None:  # image is not shown or is being computed
+            v = None
+        if v is None:
+            self.vector_plot.hide()
+        else:
+            valid = self.data_valid_positions
+            lsx, lsy = self.lsx, self.lsy
+            xindex, yindex = self.xindex, self.yindex
+            scale = self.vector_scale
+            w = self.vector_width
+            th = np.asarray(v[:,0], dtype=float)
+            v_mag = np.asarray(v[:,1], dtype=float)
+            wy = _shift(lsy)*2
+            wx = _shift(lsx)*2
+            if self.v_bin == 0:
+                y = np.linspace(*lsy)[yindex[valid]]
+                x = np.linspace(*lsx)[xindex[valid]]
+                amp = v_mag / max(v_mag) * (scale/100)
+                dispx = amp*wx/2*np.cos(np.radians(th))
+                dispy = amp*wy/2*np.sin(np.radians(th))
+                xcurve = np.empty((dispx.shape[0]*2))
+                ycurve = np.empty((dispy.shape[0]*2))
+                xcurve[0::2], xcurve[1::2] = x - dispx, x + dispx
+                ycurve[0::2], ycurve[1::2] = y - dispy, y + dispy
+                vcols = self.get_vector_colour(v[:,2])
+                v_params = [xcurve, ycurve, w, vcols]
+                self.vector_plot.setData(v_params)
+            else:
+                if self.a is None:
+                    self.update_binsize()
+                amp = self.a / max(self.a) * (scale/100)
+                dispx = amp*wx/2*np.cos(self.th)
+                dispy = amp*wy/2*np.sin(self.th)
+                xcurve = np.empty((dispx.shape[0]*2))
+                ycurve = np.empty((dispy.shape[0]*2))
+                xcurve[0::2], xcurve[1::2] = self.new_xs - dispx, self.new_xs + dispx
+                ycurve[0::2], ycurve[1::2] = self.new_ys - dispy, self.new_ys + dispy
+                vcols = self.get_vector_colour(v[:,2])
+                v_params = [xcurve, ycurve, w, vcols]
+                self.vector_plot.setData(v_params)
+            self.vector_plot.show()
+            if self.vector_colour_index == 8 and \
+                self.vcol_byval_feat is not None:
+                self.update_vect_legend()
+
+    def update_vect_legend(self):#feat
+        if self.v_bin != 0:
+            feat = self.cols
+        else:
+            feat = self.data.get_column(self.vcol_byval_feat)
+        fmin, fmax = np.min(feat), np.max(feat)
+        self.vect_legend.set_range(fmin, fmax)
+        self.vect_legend.set_colors(_color_palettes[self.vcol_byval_index][1][0])
+        self.vect_legend.setVisible(True)
+        self.vect_legend.adapt_to_size()
+
+    def get_vector_data(self):
+        if self.show_vector_plot is False or self.data is None:
+            return None
+
+        ang = self.vector_angle
+        mag = self.vector_magnitude
+        col = self.vcol_byval_feat
+        angs = self.data.get_column(ang) if ang else np.full(len(self.data), 0)
+        mags = self.data.get_column(mag) if mag else np.full(len(self.data), 1)
+        cols = self.data.get_column(col) if col else np.full(len(self.data), None)
+
+        return np.vstack([angs, mags, cols]).T
+
+    def get_vector_colour(self, feat):
+        if self.vector_colour_index == 8:
+            if feat[0] is None: # a feat has not been selected yet
+                return vector_colour[0][1][0] + (self.vector_opacity,)
+            else:
+                if self.v_bin != 0:
+                    if self.cols is None:
+                        self.update_binsize()
+                    feat = self.cols
+                fmin, fmax = np.min(feat), np.max(feat)
+                if fmin == fmax:
+                    # put a warning here?
+                    return vector_colour[0][1][0] + (self.vector_opacity,)
+                feat_idxs = np.asarray(((feat-fmin)/(fmax-fmin))*255, dtype=int)
+                col_vals = np.asarray(_color_palettes[self.vcol_byval_index][1][0][feat_idxs],
+                                      dtype=int)
+                out = [np.hstack((np.expand_dims(feat_idxs, 1), col_vals)),
+                       self.vector_opacity]
+                return out
+        else:
+            return vector_colour[self.vector_colour_index][1][0] + (self.vector_opacity,)
+
+    def update_binsize(self):
+        self.parent.Warning.bin_size_error.clear()
+        if self.v_bin == 0:
+            self.v_bin_change = 0
+            self.update_vectors()
+        else:
+            v = self.get_vector_data()
+            valid = self.data_valid_positions
+            lsx, lsy = self.lsx, self.lsy
+            xindex, yindex = self.xindex, self.yindex
+            if lsx is None:
+                v = None
+            if v is None:
+                self.v_bin_change = 0
+                self.vector_plot.hide()
+            else:
+                th = np.asarray(v[:,0], dtype=float)
+                v_mag = np.asarray(v[:,1], dtype=float)
+                col = np.asarray(v[:,2], dtype=float)
+                y = np.linspace(*lsy)[yindex]
+                x = np.linspace(*lsx)[xindex]
+                df = pd.DataFrame(
+                    [x, y, np.asarray([1 if i else 0 for i in valid]),v_mag, th, col],
+                    index = ['x', 'y', 'valid', 'v_mag', 'th', 'cols']).T
+
+                v_df = df.pivot_table(values = 'valid', columns = 'x', index = 'y', fill_value = 0)
+                a_df = df.pivot_table(values = 'v_mag', columns = 'x', index = 'y')
+                th_df = df.pivot_table(values = 'th', columns = 'x', index = 'y')
+                col_df = df.pivot_table(values = 'cols', columns = 'x', index = 'y')
+                bin_sz = self.v_bin+1
+                if bin_sz > v_df.shape[0] or bin_sz > v_df.shape[1]:
+                    bin_sz = v_df.shape[0] if bin_sz > v_df.shape[0] else v_df.shape[1]
+                    self.Warning.bin_size_error(bin_sz, bin_sz)
+                x_mod, y_mod = v_df.shape[1] % bin_sz, v_df.shape[0] % bin_sz
+                st_x_idx = int(np.floor(x_mod/2))
+                st_y_idx = int(np.floor(y_mod/2))
+
+                nvalid = np.zeros((int((v_df.shape[0]-y_mod)/bin_sz),
+                                        int((v_df.shape[1]-x_mod)/bin_sz)))
+                a = np.zeros((int((v_df.shape[0]-y_mod)/bin_sz),
+                                        int((v_df.shape[1]-x_mod)/bin_sz)))
+                th = np.zeros((int((v_df.shape[0]-y_mod)/bin_sz),
+                                        int((v_df.shape[1]-x_mod)/bin_sz)))
+                cols = np.zeros((int((v_df.shape[0]-y_mod)/bin_sz),
+                                        int((v_df.shape[1]-x_mod)/bin_sz)))
+                columns = v_df.columns
+                rows = v_df.index
+                new_xs, new_ys = [], []
+                for i in range(st_y_idx, v_df.shape[0]-y_mod, bin_sz):
+                    for j in range(st_x_idx, v_df.shape[1]-x_mod, bin_sz):
+                        nvalid[int(i/bin_sz),int(j/bin_sz)] = \
+                            np.nanmean(v_df.iloc[i:i+bin_sz,j:j+bin_sz].to_numpy())
+                        a[int(i/bin_sz),int(j/bin_sz)] = \
+                            np.nanmean(a_df.iloc[i:i+bin_sz,j:j+bin_sz].to_numpy())
+                        th[int(i/bin_sz),int(j/bin_sz)] = \
+                            circular_mean(th_df.iloc[i:i+bin_sz,j:j+bin_sz].to_numpy())
+                        cols[int(i/bin_sz),int(j/bin_sz)] = \
+                            np.nanmean(col_df.iloc[i:i+bin_sz,j:j+bin_sz].to_numpy())
+                        new_xs.append(np.sum(columns[j:j+bin_sz])/bin_sz)
+                        new_ys.append(np.sum(rows[i:i+bin_sz])/bin_sz)
+                nvalid = nvalid.flatten() > 0 & ~np.isnan(nvalid.flatten())
+                self.a = a.flatten()[nvalid]
+                self.th = th.flatten()[nvalid]
+                self.cols = cols.flatten()[nvalid]
+                self.new_xs = np.asarray(new_xs)[nvalid]
+                self.new_ys = np.asarray(new_ys)[nvalid]
+                if self.v_bin_change == 1:
+                    self.v_bin_change = 0
+                    self.update_vectors()
+
 class AxesSettingsMixin:
 
     def __init__(self):
@@ -886,7 +1215,8 @@ class VectorPlot(pg.GraphicsObject):
 class BasicImagePlot(QWidget, OWComponent, SelectionGroupMixin,
                     AxesSettingsMixin, ImageSelectionMixin,
                     ImageColorSettingMixin, ImageRGBSettingMixin,
-                    ImageZoomMixin, ConcurrentMixin):
+                    ImageZoomMixin, ConcurrentMixin,
+                    VectorSettingMixin, VectorMixin):
 
     gamma = Setting(0)
 
@@ -902,6 +1232,8 @@ class BasicImagePlot(QWidget, OWComponent, SelectionGroupMixin,
         ImageColorSettingMixin.__init__(self)
         ImageZoomMixin.__init__(self)
         ConcurrentMixin.__init__(self)
+        VectorSettingMixin.__init__(self)
+        VectorMixin.__init__(self)
         self.parent = parent
 
         self.parameter_setter = ImageParameterSetter(self)
@@ -985,10 +1317,12 @@ class BasicImagePlot(QWidget, OWComponent, SelectionGroupMixin,
         self.axes_settings_box = self.setup_axes_settings_box()
         self.color_settings_box = self.setup_color_settings_box()
         self.rgb_settings_box = self.setup_rgb_settings_box()
+        self.vector_settings_box = self.setup_vector_plot_controls()
 
         box.layout().addWidget(self.axes_settings_box)
         box.layout().addWidget(self.color_settings_box)
         box.layout().addWidget(self.rgb_settings_box)
+        box.layout().addWidget(self.vector_settings_box)
 
         choose_xy.setDefaultWidget(box)
         view_menu.addAction(choose_xy)
@@ -1102,7 +1436,7 @@ class BasicImagePlot(QWidget, OWComponent, SelectionGroupMixin,
         self.data_valid_positions = None
         self.xindex = None
         self.yindex = None
-        self.parent.update_binsize()
+        self.update_binsize()
         self.update_vectors()  # clears the vector plot
 
         self.start(self.compute_image, self.data, self.attr_x, self.attr_y,
@@ -1126,53 +1460,6 @@ class BasicImagePlot(QWidget, OWComponent, SelectionGroupMixin,
 
     def set_visible_image_comp_mode(self, comp_mode: QPainter.CompositionMode):
         self.vis_img.setCompositionMode(comp_mode)
-
-    def update_vectors(self):
-        v = self.parent.get_vector_data()
-        if self.lsx is None:  # image is not shown or is being computed
-            v = None
-        if v is None:
-            self.vector_plot.hide()
-        else:
-            valid = self.data_valid_positions
-            lsx, lsy = self.lsx, self.lsy
-            xindex, yindex = self.xindex, self.yindex
-            scale = self.parent.vector_scale
-            w = self.parent.vector_width
-            th = np.asarray(v[:,0], dtype=float)
-            v_mag = np.asarray(v[:,1], dtype=float)
-            wy = _shift(lsy)*2
-            wx = _shift(lsx)*2
-            if self.parent.v_bin == 0:
-                y = np.linspace(*lsy)[yindex[valid]]
-                x = np.linspace(*lsx)[xindex[valid]]
-                amp = v_mag / max(v_mag) * (scale/100)
-                dispx = amp*wx/2*np.cos(np.radians(th))
-                dispy = amp*wy/2*np.sin(np.radians(th))
-                xcurve = np.empty((dispx.shape[0]*2))
-                ycurve = np.empty((dispy.shape[0]*2))
-                xcurve[0::2], xcurve[1::2] = x - dispx, x + dispx
-                ycurve[0::2], ycurve[1::2] = y - dispy, y + dispy
-                vcols = self.parent.get_vector_colour(v[:,2])
-                v_params = [xcurve, ycurve, w, vcols]
-                self.vector_plot.setData(v_params)
-            else:
-                if self.parent.a is None:
-                    self.parent.update_binsize()
-                amp = self.parent.a / max(self.parent.a) * (scale/100)
-                dispx = amp*wx/2*np.cos(self.parent.th)
-                dispy = amp*wy/2*np.sin(self.parent.th)
-                xcurve = np.empty((dispx.shape[0]*2))
-                ycurve = np.empty((dispy.shape[0]*2))
-                xcurve[0::2], xcurve[1::2] = self.parent.new_xs - dispx, self.parent.new_xs + dispx
-                ycurve[0::2], ycurve[1::2] = self.parent.new_ys - dispy, self.parent.new_ys + dispy
-                vcols = self.parent.get_vector_colour(v[:,2])
-                v_params = [xcurve, ycurve, w, vcols]
-                self.vector_plot.setData(v_params)
-            self.vector_plot.show()
-            if self.parent.vector_colour_index == 8 and \
-                self.parent.vcol_byval_feat is not None:
-                self.parent.update_vect_legend()
 
     @staticmethod
     def compute_image(data: Orange.data.Table, attr_x, attr_y,
@@ -1258,7 +1545,7 @@ class BasicImagePlot(QWidget, OWComponent, SelectionGroupMixin,
             self.yindex = yindex
             self.xindex = xindex
 
-            self.parent.update_binsize()
+            self.update_binsize()
             self.update_vectors()
 
             # shift centres of the pixels so that the axes are useful
@@ -1353,24 +1640,6 @@ class OWHyper(OWWidget, SelectionOutputsMixin):
     rgb_green_value = ContextSetting(None)
     rgb_blue_value = ContextSetting(None)
 
-    show_vector_plot = Setting(False)
-    vector_angle = ContextSetting(None)
-    vector_magnitude = ContextSetting(None)
-    vector_colour_index = Setting(0)
-    vcol_byval_index = Setting(0)
-    vcol_byval_feat = ContextSetting(None)
-    vector_scale = Setting(1)
-    vector_width = Setting(1)
-    vector_opacity = Setting(255)
-    v_bin = Setting(0)
-
-    a = None
-    th = None
-    cols = None
-    new_xs = None
-    new_ys = None
-    v_bin_change = 0
-
     show_visible_image = Setting(False)
     visible_image_name = Setting(None)
     visible_image_composition = Setting('Normal')
@@ -1438,6 +1707,8 @@ class OWHyper(OWWidget, SelectionOutputsMixin):
         dbox = gui.widgetBox(self.controlArea, "Image values")
 
         icbox = gui.widgetBox(self.controlArea, "Image colors")
+        
+        ivbox = gui.widgetBox(self.controlArea, "Vector plot")
 
         rbox = gui.radioButtons(
             dbox, self, "value_type", callback=self._change_integration)
@@ -1494,9 +1765,9 @@ class OWHyper(OWWidget, SelectionOutputsMixin):
         # add image settings to the main panne after ImagePlot.__init__
         iabox.layout().addWidget(self.imageplot.axes_settings_box)
         icbox.layout().addWidget(self.imageplot.color_settings_box)
+        ivbox.layout().addWidget(self.imageplot.vector_settings_box)
 
         self.data = None
-        self.setup_vector_plot_controls()
 
         # do not save visible image (a complex structure as a setting;
         # only save its name)
@@ -1562,263 +1833,6 @@ class OWHyper(OWWidget, SelectionOutputsMixin):
 
         VisualSettingsDialog(self, self.imageplot.parameter_setter.initial_settings)
 
-    def setup_vector_plot_controls(self):
-
-        mainbox = gui.widgetBox(self.controlArea, box="Vector plot")
-
-        self.cb_vector = gui.checkBox(mainbox, self, "show_vector_plot",
-                                      label="Show vector plot",
-                                      callback=self.enable_vector)
-
-        self.vectorbox = gui.widgetBox(mainbox, box=False)
-
-        self.vector_opts = DomainModel(DomainModel.SEPARATED,
-                                       valid_types=DomainModel.PRIMITIVE, placeholder='None')
-
-        self.vector_cbyf_opts = DomainModel(DomainModel.SEPARATED,
-                                            valid_types=(ContinuousVariable,), placeholder='None')
-
-        self.vector_col_opts = vector_colour_model(vector_colour)
-        self.vector_pal_opts = color_palette_model(_color_palettes, (QSize(64, 16)))
-        self.vector_bin_opts = vector_colour_model(bins)
-
-        self.vector_angle = None
-        self.vector_magnitude = None
-        self.vcol_byval_feat = None
-        self.colour_opts = vector_colour
-
-        gb = create_gridbox(self.vectorbox, box=False)
-
-        v_angle_select = gui.comboBox(None, self, 'vector_angle', searchable=True,
-                                      label="Vector Angle", model=self.vector_opts,
-                                      contentsLength=10,
-                                      callback=self._update_vector_params)
-        grid_add_labelled_row(gb, "Angle: ", v_angle_select)
-
-        v_mag_select = gui.comboBox(None, self, 'vector_magnitude', searchable=True,
-                                    label="Vector Magnitude", model=self.vector_opts,
-                                    contentsLength=10,
-                                    callback=self._update_vector_params)
-        grid_add_labelled_row(gb, "Magnitude: ", v_mag_select)
-
-        v_bin_select = gui.comboBox(None, self, 'v_bin', label="Pixel Binning",
-                                    model=self.vector_bin_opts,
-                                    contentsLength=10,
-                                    callback=self._update_binsize)
-        grid_add_labelled_row(gb, "Binning: ", v_bin_select)
-
-        v_colour_select = gui.comboBox(None, self, 'vector_colour_index',
-                                       label="Vector Colour", model=self.vector_col_opts,
-                                       contentsLength=10,
-                                       callback=self._update_vector)
-        grid_add_labelled_row(gb, "Color: ", v_colour_select)
-
-        v_colour_byval = gui.comboBox(None, self, 'vcol_byval_feat',
-                                      label="Vector Colour by Feature",
-                                      model=self.vector_cbyf_opts,
-                                      contentsLength=10,
-                                      callback=self._update_cbyval)
-        grid_add_labelled_row(gb, "Feature: ", v_colour_byval)
-
-        v_colour_byval_select = gui.comboBox(None, self, 'vcol_byval_index',
-                                             label="", model=self.vector_pal_opts,
-                                             contentsLength=5,
-                                             callback=self._update_cbyval)
-        v_colour_byval_select.setIconSize(QSize(64, 16))
-        grid_add_labelled_row(gb, "Palette: ", v_colour_byval_select)
-
-        gb = create_gridbox(self.vectorbox, box=False)
-
-        v_scale_slider = gui.hSlider(None, self, 'vector_scale', label="Scale",
-                                     minValue=1, maxValue=1000, step=10, createLabel=False,
-                                     callback=self._update_vector)
-        grid_add_labelled_row(gb, "Scale: ", v_scale_slider)
-
-        v_width_slider = gui.hSlider(None, self, 'vector_width', label="Width",
-                                     minValue=1, maxValue=20, step=1, createLabel=False,
-                                     callback=self._update_vector)
-        grid_add_labelled_row(gb, "Width: ", v_width_slider)
-
-        v_opacity_slider = gui.hSlider(None, self, 'vector_opacity', label="Opacity",
-                                       minValue=0, maxValue=255, step=5, createLabel=False,
-                                       callback=self._update_vector)
-        grid_add_labelled_row(gb, "Opacity: ", v_opacity_slider)
-
-        self.enable_vector()
-
-    def update_vector_plot_interface(self):
-        vector_params = ['vector_angle', 'vector_magnitude', 'vector_colour_index',
-                         'vector_scale', 'vector_width', 'vector_opacity', 'v_bin']
-        for i in vector_params:
-            getattr(self.controls, i).setEnabled(self.show_vector_plot)
-
-        if self.vector_colour_index == 8 and self.show_vector_plot:
-            self.controls.vcol_byval_index.setEnabled(True)
-            self.controls.vcol_byval_feat.setEnabled(True)
-            if self.vcol_byval_feat is not None and self.show_vector_plot:
-                self.imageplot.vect_legend.setVisible(True)
-                self.imageplot.vect_legend.adapt_to_size()
-            else:
-                self.imageplot.vect_legend.setVisible(False)
-        else:
-            self.controls.vcol_byval_index.setEnabled(False)
-            self.controls.vcol_byval_feat.setEnabled(False)
-            self.imageplot.vect_legend.setVisible(False)
-
-    def enable_vector(self):
-        self.vectorbox.setVisible(self.show_vector_plot)
-        self._update_vector()
-
-    def _update_vector(self):
-        self.update_vector_plot_interface()
-        self.imageplot.update_vectors()
-
-    def update_vect_legend(self):#feat
-        if self.v_bin != 0:
-            feat = self.cols
-        else:
-            feat = self.data.get_column(self.vcol_byval_feat)
-        fmin, fmax = np.min(feat), np.max(feat)
-        self.imageplot.vect_legend.set_range(fmin, fmax)
-        self.imageplot.vect_legend.set_colors(_color_palettes[self.vcol_byval_index][1][0])
-        self.imageplot.vect_legend.setVisible(True)
-        self.imageplot.vect_legend.adapt_to_size()
-
-    def get_vector_data(self):
-        if self.show_vector_plot is False or self.data is None:
-            return None
-
-        ang = self.vector_angle
-        mag = self.vector_magnitude
-        col = self.vcol_byval_feat
-        angs = self.data.get_column(ang) if ang else np.full(len(self.data), 0)
-        mags = self.data.get_column(mag) if mag else np.full(len(self.data), 1)
-        cols = self.data.get_column(col) if col else np.full(len(self.data), None)
-
-        return np.vstack([angs, mags, cols]).T
-
-    def _update_vector_params(self):
-        self.update_binsize()
-        self._update_vector()
-
-    def _update_cbyval(self):
-        self.cols = None
-        self._update_vector()
-
-    def get_vector_colour(self, feat):
-        if self.vector_colour_index == 8:
-            if feat[0] is None: # a feat has not been selected yet
-                return vector_colour[0][1][0] + (self.vector_opacity,)
-            else:
-                if self.v_bin != 0:
-                    if self.cols is None:
-                        self.update_binsize()
-                    feat = self.cols
-                fmin, fmax = np.min(feat), np.max(feat)
-                if fmin == fmax:
-                    # put a warning here?
-                    return vector_colour[0][1][0] + (self.vector_opacity,)
-                feat_idxs = np.asarray(((feat-fmin)/(fmax-fmin))*255, dtype=int)
-                col_vals = np.asarray(_color_palettes[self.vcol_byval_index][1][0][feat_idxs],
-                                      dtype=int)
-                out = [np.hstack((np.expand_dims(feat_idxs, 1), col_vals)),
-                       self.vector_opacity]
-                return out
-        else:
-            return vector_colour[self.vector_colour_index][1][0] + (self.vector_opacity,)
-
-    def circular_mean(self, degs):
-        sin = np.nansum(np.sin(np.radians(degs*2)))
-        cos = np.nansum(np.cos(np.radians(degs*2)))
-        return np.arctan2(sin, cos)/2
-
-    def _update_binsize(self):
-        self.v_bin_change = 1
-        self.cols = None
-        self.update_binsize()
-
-    def update_binsize(self):
-        self.Warning.bin_size_error.clear()
-        if self.v_bin == 0:
-            self.v_bin_change = 0
-            self.imageplot.update_vectors()
-        else:
-            v = self.get_vector_data()
-            valid = self.imageplot.data_valid_positions
-            lsx, lsy = self.imageplot.lsx, self.imageplot.lsy
-            xindex, yindex = self.imageplot.xindex, self.imageplot.yindex
-            if lsx is None:
-                v = None
-            if v is None:
-                self.v_bin_change = 0
-                self.imageplot.vector_plot.hide()
-            else:
-                th = np.asarray(v[:,0], dtype=float)
-                v_mag = np.asarray(v[:,1], dtype=float)
-                col = np.asarray(v[:,2], dtype=float)
-                y = np.linspace(*lsy)[yindex]
-                x = np.linspace(*lsx)[xindex]
-                df = pd.DataFrame(
-                    [x, y, np.asarray([1 if i else 0 for i in valid]),v_mag, th, col],
-                    index = ['x', 'y', 'valid', 'v_mag', 'th', 'cols']).T
-
-                v_df = df.pivot_table(values = 'valid', columns = 'x', index = 'y', fill_value = 0)
-                a_df = df.pivot_table(values = 'v_mag', columns = 'x', index = 'y')
-                th_df = df.pivot_table(values = 'th', columns = 'x', index = 'y')
-                col_df = df.pivot_table(values = 'cols', columns = 'x', index = 'y')
-                bin_sz = self.v_bin+1
-                if bin_sz > v_df.shape[0] or bin_sz > v_df.shape[1]:
-                    bin_sz = v_df.shape[0] if bin_sz > v_df.shape[0] else v_df.shape[1]
-                    self.Warning.bin_size_error(bin_sz, bin_sz)
-                x_mod, y_mod = v_df.shape[1] % bin_sz, v_df.shape[0] % bin_sz
-                st_x_idx = int(np.floor(x_mod/2))
-                st_y_idx = int(np.floor(y_mod/2))
-
-                nvalid = np.zeros((int((v_df.shape[0]-y_mod)/bin_sz),
-                                        int((v_df.shape[1]-x_mod)/bin_sz)))
-                a = np.zeros((int((v_df.shape[0]-y_mod)/bin_sz),
-                                        int((v_df.shape[1]-x_mod)/bin_sz)))
-                th = np.zeros((int((v_df.shape[0]-y_mod)/bin_sz),
-                                        int((v_df.shape[1]-x_mod)/bin_sz)))
-                cols = np.zeros((int((v_df.shape[0]-y_mod)/bin_sz),
-                                        int((v_df.shape[1]-x_mod)/bin_sz)))
-                columns = v_df.columns
-                rows = v_df.index
-                new_xs, new_ys = [], []
-                for i in range(st_y_idx, v_df.shape[0]-y_mod, bin_sz):
-                    for j in range(st_x_idx, v_df.shape[1]-x_mod, bin_sz):
-                        nvalid[int(i/bin_sz),int(j/bin_sz)] = \
-                            np.nanmean(v_df.iloc[i:i+bin_sz,j:j+bin_sz].to_numpy())
-                        a[int(i/bin_sz),int(j/bin_sz)] = \
-                            np.nanmean(a_df.iloc[i:i+bin_sz,j:j+bin_sz].to_numpy())
-                        th[int(i/bin_sz),int(j/bin_sz)] = \
-                            self.circular_mean(th_df.iloc[i:i+bin_sz,j:j+bin_sz].to_numpy())
-                        cols[int(i/bin_sz),int(j/bin_sz)] = \
-                            np.nanmean(col_df.iloc[i:i+bin_sz,j:j+bin_sz].to_numpy())
-                        new_xs.append(np.sum(columns[j:j+bin_sz])/bin_sz)
-                        new_ys.append(np.sum(rows[i:i+bin_sz])/bin_sz)
-                nvalid = nvalid.flatten() > 0 & ~np.isnan(nvalid.flatten())
-                self.a = a.flatten()[nvalid]
-                self.th = th.flatten()[nvalid]
-                self.cols = cols.flatten()[nvalid]
-                self.new_xs = np.asarray(new_xs)[nvalid]
-                self.new_ys = np.asarray(new_ys)[nvalid]
-                if self.v_bin_change == 1:
-                    self.v_bin_change = 0
-                    self.imageplot.update_vectors()
-
-    def init_vector_plot(self, data):
-        domain = data.domain if data is not None else None
-        self.vector_opts.set_domain(domain)
-        self.vector_cbyf_opts.set_domain(domain)
-
-        # initialize values so that the combo boxes are not in invalid states
-        if self.vector_opts:
-            # TODO here we could instead set good default values if available
-            self.vector_magnitude = self.vector_angle = self.vcol_byval_feat = None
-        else:
-            self.vector_magnitude = self.vector_angle = self.vcol_byval_feat = None
-
     def setup_visible_image_controls(self):
         self.visbox = gui.widgetBox(self.controlArea, box="Visible image")
 
@@ -1874,7 +1888,7 @@ class OWHyper(OWWidget, SelectionOutputsMixin):
     def init_interface_data(self, data):
         self.init_attr_values(data)
         self.init_visible_images(data)
-        self.init_vector_plot(data)
+        self.imageplot.init_vector_plot(data)
 
     def output_image_selection(self):
         _, selected = self.send_selection(self.data, self.imageplot.selection_group)
