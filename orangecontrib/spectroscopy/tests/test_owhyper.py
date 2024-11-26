@@ -771,6 +771,7 @@ class TestVisibleImage(WidgetTest):
         w.controls.show_visible_image.setChecked(False)
         self.assertNotIn(w.imageplot.vis_img, w.imageplot.plot.items)
 
+
 class TestVectorPlot(WidgetTest):
 
     @classmethod
@@ -787,94 +788,94 @@ class TestVectorPlot(WidgetTest):
         w = self.widget
         for data in [None, self.whitelight, self.iris]:
             self.send_signal(w.Inputs.data, data)
-            self.assertFalse(w.show_vector_plot)
-            self.assertFalse(w.controls.vector_magnitude.isEnabled())
-            self.assertFalse(w.controls.vector_angle.isEnabled())
-            self.assertFalse(w.controls.vector_colour_index.isEnabled())
-            self.assertFalse(w.controls.vcol_byval_index.isEnabled())
-            self.assertFalse(w.controls.vcol_byval_feat.isEnabled())
-            self.assertFalse(w.controls.vector_scale.isEnabled())
-            self.assertFalse(w.controls.vector_width.isEnabled())
-            self.assertFalse(w.controls.vector_opacity.isEnabled())
-            self.assertFalse(w.controls.v_bin.isEnabled())
+            self.assertFalse(w.imageplot.show_vector_plot)
+            self.assertFalse(w.controls.imageplot.vector_magnitude.isEnabled())
+            self.assertFalse(w.controls.imageplot.vector_angle.isEnabled())
+            self.assertFalse(w.controls.imageplot.vector_color_index.isEnabled())
+            self.assertFalse(w.controls.imageplot.vcol_byval_index.isEnabled())
+            self.assertFalse(w.controls.imageplot.vcol_byval_feat.isEnabled())
+            self.assertFalse(w.controls.imageplot.vector_scale.isEnabled())
+            self.assertFalse(w.controls.imageplot.vector_width.isEnabled())
+            self.assertFalse(w.controls.imageplot.vector_opacity.isEnabled())
+            self.assertFalse(w.controls.imageplot.v_bin.isEnabled())
 
-            w.controls.show_vector_plot.click()
-            self.assertTrue(w.show_vector_plot)
-            self.assertTrue(w.controls.vector_magnitude.isEnabled())
-            self.assertTrue(w.controls.vector_angle.isEnabled())
-            self.assertTrue(w.controls.vector_colour_index.isEnabled())
-            self.assertTrue(w.controls.vector_scale.isEnabled())
-            self.assertTrue(w.controls.vector_width.isEnabled())
-            self.assertTrue(w.controls.vector_opacity.isEnabled())
-            self.assertTrue(w.controls.v_bin.isEnabled())
+            w.controls.imageplot.show_vector_plot.click()
+            self.assertTrue(w.imageplot.show_vector_plot)
+            self.assertTrue(w.controls.imageplot.vector_magnitude.isEnabled())
+            self.assertTrue(w.controls.imageplot.vector_angle.isEnabled())
+            self.assertTrue(w.controls.imageplot.vector_color_index.isEnabled())
+            self.assertTrue(w.controls.imageplot.vector_scale.isEnabled())
+            self.assertTrue(w.controls.imageplot.vector_width.isEnabled())
+            self.assertTrue(w.controls.imageplot.vector_opacity.isEnabled())
+            self.assertTrue(w.controls.imageplot.v_bin.isEnabled())
 
-            w.vector_colour_index = 8
-            w._update_vector()
-            self.assertTrue(w.controls.vcol_byval_index.isEnabled())
-            self.assertTrue(w.controls.vcol_byval_feat.isEnabled())
+            w.imageplot.vector_color_index = 8
+            w.imageplot._update_vector()
+            self.assertTrue(w.controls.imageplot.vcol_byval_index.isEnabled())
+            self.assertTrue(w.controls.imageplot.vcol_byval_feat.isEnabled())
 
-            w.vector_colour_index = 3
-            w._update_vector()
-            self.assertFalse(w.controls.vcol_byval_index.isEnabled())
-            self.assertFalse(w.controls.vcol_byval_feat.isEnabled())
+            w.imageplot.vector_color_index = 3
+            w.imageplot._update_vector()
+            self.assertFalse(w.controls.imageplot.vcol_byval_index.isEnabled())
+            self.assertFalse(w.controls.imageplot.vcol_byval_feat.isEnabled())
 
-            w.vector_colour_index = 8
-            w._update_vector()
-            self.assertTrue(w.controls.vcol_byval_index.isEnabled())
-            self.assertTrue(w.controls.vcol_byval_feat.isEnabled())
+            w.imageplot.vector_color_index = 8
+            w.imageplot._update_vector()
+            self.assertTrue(w.controls.imageplot.vcol_byval_index.isEnabled())
+            self.assertTrue(w.controls.imageplot.vcol_byval_feat.isEnabled())
 
-            w.controls.show_vector_plot.click()
-            self.assertFalse(w.controls.vector_magnitude.isEnabled())
-            self.assertFalse(w.controls.vector_angle.isEnabled())
-            self.assertFalse(w.controls.vector_colour_index.isEnabled())
-            self.assertFalse(w.controls.vcol_byval_index.isEnabled())
-            self.assertFalse(w.controls.vcol_byval_feat.isEnabled())
-            self.assertFalse(w.controls.vector_scale.isEnabled())
-            self.assertFalse(w.controls.vector_width.isEnabled())
-            self.assertFalse(w.controls.vector_opacity.isEnabled())
-            self.assertFalse(w.controls.v_bin.isEnabled())
+            w.controls.imageplot.show_vector_plot.click()
+            self.assertFalse(w.controls.imageplot.vector_magnitude.isEnabled())
+            self.assertFalse(w.controls.imageplot.vector_angle.isEnabled())
+            self.assertFalse(w.controls.imageplot.vector_color_index.isEnabled())
+            self.assertFalse(w.controls.imageplot.vcol_byval_index.isEnabled())
+            self.assertFalse(w.controls.imageplot.vcol_byval_feat.isEnabled())
+            self.assertFalse(w.controls.imageplot.vector_scale.isEnabled())
+            self.assertFalse(w.controls.imageplot.vector_width.isEnabled())
+            self.assertFalse(w.controls.imageplot.vector_opacity.isEnabled())
+            self.assertFalse(w.controls.imageplot.v_bin.isEnabled())
 
     def test_legend(self):
         self.send_signal(self.widget.Inputs.data, self.iris)
-        self.widget.controls.show_vector_plot.setChecked(True)
-        self.widget.enable_vector()
-        self.widget.vector_colour_index = 8
-        self.widget._update_vector()
+        self.widget.controls.imageplot.show_vector_plot.setChecked(True)
+        self.widget.imageplot.enable_vector()
+        self.widget.imageplot.vector_color_index = 8
+        self.widget.imageplot._update_vector()
         self.assertFalse(self.widget.imageplot.vect_legend.isVisible())
-        self.widget.vcol_byval_feat = self.iris.domain.attributes[0]
-        self.widget._update_cbyval()
+        self.widget.imageplot.vcol_byval_feat = self.iris.domain.attributes[0]
+        self.widget.imageplot._update_cbyval()
         self.assertTrue(self.widget.imageplot.vect_legend.isVisible())
-        self.widget.vcol_byval_feat = None
-        self.widget._update_cbyval()
+        self.widget.imageplot.vcol_byval_feat = None
+        self.widget.imageplot._update_cbyval()
         self.assertFalse(self.widget.imageplot.vect_legend.isVisible())
-        self.widget.controls.show_vector_plot.setChecked(False)
-        self.widget.enable_vector()
+        self.widget.controls.imageplot.show_vector_plot.setChecked(False)
+        self.widget.imageplot.enable_vector()
     
-    def test_vect_colour(self):
+    def test_vect_color(self):
         feat = self.iris.get_column(self.iris.domain.attributes[0])
         self.send_signal(self.widget.Inputs.data, self.iris)
-        self.widget.controls.show_vector_plot.setChecked(True)
-        self.widget.enable_vector()
+        self.widget.controls.imageplot.show_vector_plot.setChecked(True)
+        self.widget.imageplot.enable_vector()
         for i in range(8):
-            self.widget.vector_colour_index = i
-            self.widget._update_vector()
-            self.assertEqual(len(self.widget.get_vector_colour(feat)), 4)
-        self.widget.vector_colour_index = 8
-        self.widget._update_vector()
-        self.assertEqual(self.widget.get_vector_colour(feat)[0].shape, (feat.shape[0], 4))
-        self.widget.controls.show_vector_plot.setChecked(False)
-        self.widget.enable_vector()
+            self.widget.imageplot.vector_color_index = i
+            self.widget.imageplot._update_vector()
+            self.assertEqual(len(self.widget.imageplot.get_vector_color(feat)), 4)
+        self.widget.imageplot.vector_color_index = 8
+        self.widget.imageplot._update_vector()
+        self.assertEqual(self.widget.imageplot.get_vector_color(feat)[0].shape, (feat.shape[0], 4))
+        self.widget.controls.imageplot.show_vector_plot.setChecked(False)
+        self.widget.imageplot.enable_vector()
 
     def test_vect_bin(self):
         self.send_signal(self.widget.Inputs.data, self.iris)
-        self.widget.controls.show_vector_plot.setChecked(True)
-        self.widget.enable_vector()
-        self.widget.vector_angle = self.iris.domain.attributes[0]
-        self.widget.vector_magnitude = self.iris.domain.attributes[0]
-        self.widget._update_vector_params()
+        self.widget.controls.imageplot.show_vector_plot.setChecked(True)
+        self.widget.imageplot.enable_vector()
+        self.widget.imageplot.vector_angle = self.iris.domain.attributes[0]
+        self.widget.imageplot.vector_magnitude = self.iris.domain.attributes[0]
+        self.widget.imageplot._update_vector_params()
 
-        self.widget.v_bin = 0
-        self.widget._update_binsize()
+        self.widget.imageplot.v_bin = 0
+        self.widget.imageplot._update_binsize()
         self.widget.imageplot.update_view()
         wait_for_image(self.widget)
         print(self.widget.imageplot.vector_plot.params[0].shape)
@@ -883,22 +884,22 @@ class TestVectorPlot(WidgetTest):
         self.assertEqual(self.widget.imageplot.vector_plot.params[1].shape[0],
                          self.iris.X.shape[0]*2)
 
-        self.widget.v_bin = 1
-        self.widget._update_binsize()
+        self.widget.imageplot.v_bin = 1
+        self.widget.imageplot._update_binsize()
         self.widget.imageplot.update_view()
         wait_for_image(self.widget)
         self.assertEqual(self.widget.imageplot.vector_plot.params[0].shape[0], 2)
         self.assertEqual(self.widget.imageplot.vector_plot.params[1].shape[0], 2)
 
-        self.widget.v_bin = 2
-        self.widget._update_binsize()
+        self.widget.imageplot.v_bin = 2
+        self.widget.imageplot._update_binsize()
         self.widget.imageplot.update_view()
         wait_for_image(self.widget)
         self.assertEqual(self.widget.imageplot.vector_plot.params[0].shape[0], 2)
         self.assertEqual(self.widget.imageplot.vector_plot.params[1].shape[0], 2)
         
-        self.widget.v_bin = 3
-        self.widget._update_binsize()
+        self.widget.imageplot.v_bin = 3
+        self.widget.imageplot._update_binsize()
         self.widget.imageplot.update_view()
         wait_for_image(self.widget)
         self.assertTrue(self.widget.Warning.bin_size_error.is_shown())

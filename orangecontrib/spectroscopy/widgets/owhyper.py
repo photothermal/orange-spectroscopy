@@ -612,7 +612,7 @@ class VectorMixin:
                 bin_sz = self.v_bin+1
                 if bin_sz > v_df.shape[0] or bin_sz > v_df.shape[1]:
                     bin_sz = v_df.shape[0] if bin_sz > v_df.shape[0] else v_df.shape[1]
-                    self.Warning.bin_size_error(bin_sz, bin_sz)
+                    self.parent.Warning.bin_size_error(bin_sz, bin_sz)
                 x_mod, y_mod = v_df.shape[1] % bin_sz, v_df.shape[0] % bin_sz
                 st_x_idx = int(np.floor(x_mod/2))
                 st_y_idx = int(np.floor(y_mod/2))
