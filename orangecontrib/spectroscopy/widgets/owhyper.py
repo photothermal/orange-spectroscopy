@@ -313,6 +313,7 @@ def color_palette_model(palettes, iconsize=QSize(64, 16)):
         model.appendRow([item])
     return model
 
+
 def vector_color_model(colors):
     model = QStandardItemModel()
     for name, palette in colors:
@@ -321,10 +322,12 @@ def vector_color_model(colors):
         model.appendRow([item])
     return model
 
+
 def circular_mean(degs):
     sin = np.nansum(np.sin(np.radians(degs*2)))
     cos = np.nansum(np.cos(np.radians(degs*2)))
     return np.arctan2(sin, cos)/2
+
 
 class VectorSettingMixin:
     show_vector_plot = Setting(False)
@@ -477,6 +480,7 @@ class VectorSettingMixin:
         else:
             self.vector_magnitude = self.vector_angle = self.vcol_byval_feat = None
 
+
 class VectorMixin:
 
     def __init__(self):
@@ -486,6 +490,14 @@ class VectorMixin:
         self.new_xs = None
         self.new_ys = None
         self.v_bin_change = 0
+
+        ci = self.plotview.centralWidget
+        self.vector_plot = VectorPlot()
+        self.vector_plot.hide()
+        self.plot.addItem(self.vector_plot)
+        self.vect_legend = ImageColorLegend()
+        self.vect_legend.setVisible(False)
+        ci.addItem(self.vect_legend)
 
     def update_vectors(self):
         v = self.get_vector_data()
@@ -649,6 +661,7 @@ class VectorMixin:
                 if self.v_bin_change == 1:
                     self.v_bin_change = 0
                     self.update_vectors()
+
 
 class AxesSettingsMixin:
 
@@ -1129,6 +1142,7 @@ class ImageParameterSetter(CommonParameterSetter):
     def vcolorbar(self):
         return self.master.vect_legend.axis
 
+
 class VectorPlot(pg.GraphicsObject):
 
     def __init__(self):
@@ -1212,11 +1226,11 @@ class VectorPlot(pg.GraphicsObject):
 
         return self._boundingRect
 
+
 class BasicImagePlot(QWidget, OWComponent, SelectionGroupMixin,
                     AxesSettingsMixin, ImageSelectionMixin,
                     ImageColorSettingMixin, ImageRGBSettingMixin,
-                    ImageZoomMixin, ConcurrentMixin,
-                    VectorSettingMixin, VectorMixin):
+                    ImageZoomMixin, ConcurrentMixin):
 
     gamma = Setting(0)
 
@@ -1232,8 +1246,6 @@ class BasicImagePlot(QWidget, OWComponent, SelectionGroupMixin,
         ImageColorSettingMixin.__init__(self)
         ImageZoomMixin.__init__(self)
         ConcurrentMixin.__init__(self)
-        VectorSettingMixin.__init__(self)
-        VectorMixin.__init__(self)
         self.parent = parent
 
         self.parameter_setter = ImageParameterSetter(self)
@@ -1276,13 +1288,6 @@ class BasicImagePlot(QWidget, OWComponent, SelectionGroupMixin,
         self.plot.vb.setAspectLocked()
         self.plot.scene().sigMouseMoved.connect(self.plot.vb.mouseMovedEvent)
 
-        self.vector_plot = VectorPlot()
-        self.vector_plot.hide()
-        self.plot.addItem(self.vector_plot)
-        self.vect_legend = ImageColorLegend()
-        self.vect_legend.setVisible(False)
-        ci.addItem(self.vect_legend)
-
         layout = QGridLayout()
         self.plotview.setLayout(layout)
         self.button = QPushButton("Menu", self.plotview)
@@ -1317,12 +1322,10 @@ class BasicImagePlot(QWidget, OWComponent, SelectionGroupMixin,
         self.axes_settings_box = self.setup_axes_settings_box()
         self.color_settings_box = self.setup_color_settings_box()
         self.rgb_settings_box = self.setup_rgb_settings_box()
-        self.vector_settings_box = self.setup_vector_plot_controls()
 
         box.layout().addWidget(self.axes_settings_box)
         box.layout().addWidget(self.color_settings_box)
         box.layout().addWidget(self.rgb_settings_box)
-        box.layout().addWidget(self.vector_settings_box)
 
         choose_xy.setDefaultWidget(box)
         view_menu.addAction(choose_xy)
@@ -1436,8 +1439,10 @@ class BasicImagePlot(QWidget, OWComponent, SelectionGroupMixin,
         self.data_valid_positions = None
         self.xindex = None
         self.yindex = None
-        self.update_binsize()
-        self.update_vectors()  # clears the vector plot
+
+        if isinstance(self, VectorMixin):
+            self.update_binsize()
+            self.update_vectors()  # clears the vector plot
 
         self.start(self.compute_image, self.data, self.attr_x, self.attr_y,
                     self.parent.image_values(),
@@ -1545,8 +1550,9 @@ class BasicImagePlot(QWidget, OWComponent, SelectionGroupMixin,
             self.yindex = yindex
             self.xindex = xindex
 
-            self.update_binsize()
-            self.update_vectors()
+            if isinstance(self, VectorMixin):
+                self.update_binsize()
+                self.update_vectors()
 
             # shift centres of the pixels so that the axes are useful
             shiftx = _shift(lsx)
@@ -1580,9 +1586,16 @@ class BasicImagePlot(QWidget, OWComponent, SelectionGroupMixin,
             raise ex
 
 
-class ImagePlot(BasicImagePlot):
+class ImagePlot(BasicImagePlot,
+                VectorSettingMixin, VectorMixin):
+
     attr_x = ContextSetting(None, exclude_attributes=True)
     attr_y = ContextSetting(None, exclude_attributes=True)
+
+    def __init__(self, parent):
+        BasicImagePlot.__init__(self, parent)
+        VectorSettingMixin.__init__(self)
+        VectorMixin.__init__(self)
 
 
 class CurvePlotHyper(CurvePlot):
@@ -1765,7 +1778,7 @@ class OWHyper(OWWidget, SelectionOutputsMixin):
         # add image settings to the main panne after ImagePlot.__init__
         iabox.layout().addWidget(self.imageplot.axes_settings_box)
         icbox.layout().addWidget(self.imageplot.color_settings_box)
-        ivbox.layout().addWidget(self.imageplot.vector_settings_box)
+        ivbox.layout().addWidget(self.imageplot.setup_vector_plot_controls())
 
         self.data = None
 
