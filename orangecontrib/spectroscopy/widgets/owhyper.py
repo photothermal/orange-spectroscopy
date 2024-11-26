@@ -252,7 +252,7 @@ _color_palettes = [
     ("HSV", {0: pg.colormap.get("hsv", source='matplotlib').getLookupTable(nPts=256)}),
 ]
 #r, g, b, c, m, y, k, w
-vector_colour = [
+vector_color = [
     ("Black", {0: (0,0,0)}),
     ("White", {0: (255,255,255)}),
     ("Red", {0: (255,0,0)}),
@@ -313,9 +313,9 @@ def color_palette_model(palettes, iconsize=QSize(64, 16)):
         model.appendRow([item])
     return model
 
-def vector_colour_model(colours):
+def vector_color_model(colors):
     model = QStandardItemModel()
-    for name, palette in colours:
+    for name, palette in colors:
         item = QStandardItem(name)
         item.setData(palette, Qt.UserRole)
         model.appendRow([item])
@@ -330,7 +330,7 @@ class VectorSettingMixin:
     show_vector_plot = Setting(False)
     vector_angle = ContextSetting(None)
     vector_magnitude = ContextSetting(None)
-    vector_colour_index = Setting(0)
+    vector_color_index = Setting(0)
     vcol_byval_index = Setting(0)
     vcol_byval_feat = ContextSetting(None)
     vector_scale = Setting(1)
@@ -354,14 +354,14 @@ class VectorSettingMixin:
         self.vector_cbyf_opts = DomainModel(DomainModel.SEPARATED,
                                             valid_types=(ContinuousVariable,), placeholder='None')
 
-        self.vector_col_opts = vector_colour_model(vector_colour)
+        self.vector_col_opts = vector_color_model(vector_color)
         self.vector_pal_opts = color_palette_model(_color_palettes, (QSize(64, 16)))
-        self.vector_bin_opts = vector_colour_model(bins)
+        self.vector_bin_opts = vector_color_model(bins)
 
         self.vector_angle = None
         self.vector_magnitude = None
         self.vcol_byval_feat = None
-        self.colour_opts = vector_colour
+        self.color_opts = vector_color
 
         gb = create_gridbox(self.vectorbox, box=False)
 
@@ -383,25 +383,25 @@ class VectorSettingMixin:
                                     callback=self._update_binsize)
         grid_add_labelled_row(gb, "Binning: ", v_bin_select)
 
-        v_colour_select = gui.comboBox(None, self, 'vector_colour_index',
-                                       label="Vector Colour", model=self.vector_col_opts,
+        v_color_select = gui.comboBox(None, self, 'vector_color_index',
+                                       label="Vector color", model=self.vector_col_opts,
                                        contentsLength=10,
                                        callback=self._update_vector)
-        grid_add_labelled_row(gb, "Color: ", v_colour_select)
+        grid_add_labelled_row(gb, "Color: ", v_color_select)
 
-        v_colour_byval = gui.comboBox(None, self, 'vcol_byval_feat',
-                                      label="Vector Colour by Feature",
+        v_color_byval = gui.comboBox(None, self, 'vcol_byval_feat',
+                                      label="Vector color by Feature",
                                       model=self.vector_cbyf_opts,
                                       contentsLength=10,
                                       callback=self._update_cbyval)
-        grid_add_labelled_row(gb, "Feature: ", v_colour_byval)
+        grid_add_labelled_row(gb, "Feature: ", v_color_byval)
 
-        v_colour_byval_select = gui.comboBox(None, self, 'vcol_byval_index',
+        v_color_byval_select = gui.comboBox(None, self, 'vcol_byval_index',
                                              label="", model=self.vector_pal_opts,
                                              contentsLength=5,
                                              callback=self._update_cbyval)
-        v_colour_byval_select.setIconSize(QSize(64, 16))
-        grid_add_labelled_row(gb, "Palette: ", v_colour_byval_select)
+        v_color_byval_select.setIconSize(QSize(64, 16))
+        grid_add_labelled_row(gb, "Palette: ", v_color_byval_select)
 
         gb = create_gridbox(self.vectorbox, box=False)
 
@@ -426,12 +426,12 @@ class VectorSettingMixin:
         return box
 
     def update_vector_plot_interface(self):
-        vector_params = ['vector_angle', 'vector_magnitude', 'vector_colour_index',
+        vector_params = ['vector_angle', 'vector_magnitude', 'vector_color_index',
                          'vector_scale', 'vector_width', 'vector_opacity', 'v_bin']
         for i in vector_params:
             getattr(self.controls, i).setEnabled(self.show_vector_plot)
 
-        if self.vector_colour_index == 8 and self.show_vector_plot:
+        if self.vector_color_index == 8 and self.show_vector_plot:
             self.controls.vcol_byval_index.setEnabled(True)
             self.controls.vcol_byval_feat.setEnabled(True)
             if self.vcol_byval_feat is not None and self.show_vector_plot:
@@ -513,7 +513,7 @@ class VectorMixin:
                 ycurve = np.empty((dispy.shape[0]*2))
                 xcurve[0::2], xcurve[1::2] = x - dispx, x + dispx
                 ycurve[0::2], ycurve[1::2] = y - dispy, y + dispy
-                vcols = self.get_vector_colour(v[:,2])
+                vcols = self.get_vector_color(v[:,2])
                 v_params = [xcurve, ycurve, w, vcols]
                 self.vector_plot.setData(v_params)
             else:
@@ -526,11 +526,11 @@ class VectorMixin:
                 ycurve = np.empty((dispy.shape[0]*2))
                 xcurve[0::2], xcurve[1::2] = self.new_xs - dispx, self.new_xs + dispx
                 ycurve[0::2], ycurve[1::2] = self.new_ys - dispy, self.new_ys + dispy
-                vcols = self.get_vector_colour(v[:,2])
+                vcols = self.get_vector_color(v[:,2])
                 v_params = [xcurve, ycurve, w, vcols]
                 self.vector_plot.setData(v_params)
             self.vector_plot.show()
-            if self.vector_colour_index == 8 and \
+            if self.vector_color_index == 8 and \
                 self.vcol_byval_feat is not None:
                 self.update_vect_legend()
 
@@ -558,10 +558,10 @@ class VectorMixin:
 
         return np.vstack([angs, mags, cols]).T
 
-    def get_vector_colour(self, feat):
-        if self.vector_colour_index == 8:
+    def get_vector_color(self, feat):
+        if self.vector_color_index == 8:
             if feat[0] is None: # a feat has not been selected yet
-                return vector_colour[0][1][0] + (self.vector_opacity,)
+                return vector_color[0][1][0] + (self.vector_opacity,)
             else:
                 if self.v_bin != 0:
                     if self.cols is None:
@@ -570,7 +570,7 @@ class VectorMixin:
                 fmin, fmax = np.min(feat), np.max(feat)
                 if fmin == fmax:
                     # put a warning here?
-                    return vector_colour[0][1][0] + (self.vector_opacity,)
+                    return vector_color[0][1][0] + (self.vector_opacity,)
                 feat_idxs = np.asarray(((feat-fmin)/(fmax-fmin))*255, dtype=int)
                 col_vals = np.asarray(_color_palettes[self.vcol_byval_index][1][0][feat_idxs],
                                       dtype=int)
@@ -578,7 +578,7 @@ class VectorMixin:
                        self.vector_opacity]
                 return out
         else:
-            return vector_colour[self.vector_colour_index][1][0] + (self.vector_opacity,)
+            return vector_color[self.vector_color_index][1][0] + (self.vector_opacity,)
 
     def update_binsize(self):
         self.parent.Warning.bin_size_error.clear()
