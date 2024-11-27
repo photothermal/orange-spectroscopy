@@ -463,11 +463,11 @@ class OWPolar(OWWidget, ConcurrentWidgetMixin):
     resizing_enabled = True
     alpha = Setting(0, schema_only=True)
 
-    map_x = ContextSetting(None)
-    map_y = ContextSetting(None)
+    map_x = ContextSetting(None, exclude_attributes=True, exclude_class_vars=True)
+    map_y = ContextSetting(None, exclude_attributes=True, exclude_class_vars=True)
     invert_angles = Setting(False, schema_only=True)
     average = Setting(False, schema_only=True)
-    angles = ContextSetting(None)
+    angles = ContextSetting(None, exclude_attributes=True, exclude_class_vars=True)
     spec_type = Setting(0)
     feats: List[Variable] = ContextSetting([])
 
