@@ -238,6 +238,11 @@ class TestPerkinElmerReader(unittest.TestCase):
         self.assertEqual(min(getx(d)), 750.0)
         self.assertEqual(max(getx(d)), 4000.0)
 
+        map_x = np.tile([17480, 17530, 17580, 17630], 4)
+        map_y = np.repeat([2749, 2799, 2849, 2899], 4)
+        np.testing.assert_almost_equal(d.metas[:, 0], map_x, decimal=5)
+        np.testing.assert_almost_equal(d.metas[:, 1], map_y, decimal=5)
+
 
 class TestAgilentReader(unittest.TestCase):
 
