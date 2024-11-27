@@ -330,7 +330,7 @@ def circular_mean(degs):
 
 
 class VectorSettingMixin:
-    show_vector_plot = Setting(False)
+    show_vector_plot = Setting(False, schema_only=True)
     vector_angle = ContextSetting(None)
     vector_magnitude = ContextSetting(None)
     vector_color_index = Setting(0)
@@ -1639,7 +1639,7 @@ class OWHyper(OWWidget, SelectionOutputsMixin):
     replaces = ["orangecontrib.infrared.widgets.owhyper.OWHyper"]
     keywords = ["image", "spectral", "chemical", "imaging"]
 
-    settings_version = 7
+    settings_version = 8
     settingsHandler = DomainContextHandler()
 
     imageplot = SettingProvider(ImagePlot)
