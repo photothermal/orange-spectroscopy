@@ -510,13 +510,13 @@ class OWPolar(OWWidget, ConcurrentWidgetMixin):
         hbox = gui.hBox(self.controlArea)
         #col 1
 
-        vbox2 = gui.vBox(hbox, "Inputs")
+        vbox2 = gui.vBox(hbox, None)
 
         form2 = QWidget()
         formlayout2 = QFormLayout()
         form2.setLayout(formlayout2)
 
-        self.multifile = gui.widgetBox(vbox2, "All angles in a single input",
+        self.multifile = gui.widgetBox(vbox2, "Single input (with all angles)",
                                        sizePolicy=(QSizePolicy.Minimum, QSizePolicy.Fixed))
 
         self.anglemetas = DomainModel(DomainModel.METAS, valid_types=DiscreteVariable)
@@ -526,7 +526,7 @@ class OWPolar(OWWidget, ConcurrentWidgetMixin):
         self.anglesel.setDisabled(True)
 
 
-        self.multiin = gui.widgetBox(vbox2, "Single angle per input",
+        self.multiin = gui.widgetBox(vbox2, "Multiple inputs (single angle per input)",
                                      sizePolicy=(QSizePolicy.Minimum, QSizePolicy.Fixed))
 
         vbox2.layout().addWidget(form2)
@@ -548,7 +548,7 @@ class OWPolar(OWWidget, ConcurrentWidgetMixin):
                                             connector=self._feat_changed))
 
         #col 3
-        vbox = gui.vBox(hbox, "Parameters")
+        vbox = gui.vBox(hbox, None)
 
         form = QWidget()
         formlayout = QFormLayout()
@@ -575,7 +575,7 @@ class OWPolar(OWWidget, ConcurrentWidgetMixin):
 
         vbox.layout().addWidget(form)
 
-        pbox = gui.widgetBox(vbox, sizePolicy=(QSizePolicy.Minimum, QSizePolicy.Fixed))
+        pbox = gui.widgetBox(vbox, "Parameters", sizePolicy=(QSizePolicy.Minimum, QSizePolicy.Fixed))
         gui.lineEdit(pbox, self, "alpha", u"TDM Tilt (\N{DEGREE SIGN})",
                      callback=self._change_input, valueType=int,
                      validator=QIntValidator(0, 90), tooltip= \
@@ -589,13 +589,15 @@ class OWPolar(OWWidget, ConcurrentWidgetMixin):
 
         gui.auto_commit(self.controlArea, self, "autocommit", "Apply", commit=self.commit)
 
-        citation = gui.widgetLabel(self.controlArea)
+        gui.rubber(vbox2)
+        cbox = gui.widgetBox(vbox2, "Citations")
+        citation = gui.widgetLabel(cbox)
         citation.setOpenExternalLinks(True)
         citation.setText('\
             <body>\
-            Please consider citing the following articles if using results from this widget:<br> \
-            <a href="https://doi.org/10.1021/ma302560q">Hikima et al. (2013)</a><br> \
-            <a href="">Gassner et al. (2025)</a> \
+            When publishing results, consider citing:<br> \
+            - <a href="https://doi.org/10.1021/ma302560q">Hikima et al. (2013)</a><br> \
+            - <a href="">Gassner et al. (2025)</a> \
             </body>')
 
         self._change_input()
