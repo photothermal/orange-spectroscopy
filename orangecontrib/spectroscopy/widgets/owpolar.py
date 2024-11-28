@@ -588,6 +588,16 @@ class OWPolar(OWWidget, ConcurrentWidgetMixin):
                      callback=self._change_input)
 
         gui.auto_commit(self.controlArea, self, "autocommit", "Apply", commit=self.commit)
+
+        citation = gui.widgetLabel(self.controlArea)
+        citation.setOpenExternalLinks(True)
+        citation.setText('\
+            <body>\
+            Please consider citing the following articles if using results from this widget:<br> \
+            <a href="https://doi.org/10.1021/ma302560q">Hikima et al. (2013)</a><br> \
+            <a href="">Gassner et al. (2025)</a> \
+            </body>')
+
         self._change_input()
         self.contextAboutToBeOpened.connect(lambda x: self.init_attr_values(x[0]))
 
