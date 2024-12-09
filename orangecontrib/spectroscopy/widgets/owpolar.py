@@ -8,9 +8,9 @@ import math
 from types import SimpleNamespace
 import numpy as np
 import pandas as pd
-from AnyQt.QtCore import QItemSelectionModel, QItemSelection, QItemSelectionRange
+from AnyQt.QtCore import QItemSelectionModel, QItemSelection, QItemSelectionRange, Qt
 from AnyQt.QtWidgets import QFormLayout, QWidget, QListView, QLabel, QSizePolicy
-from AnyQt.QtGui import QIntValidator
+from AnyQt.QtGui import QDoubleValidator
 from scipy.optimize import curve_fit
 
 
@@ -28,7 +28,20 @@ from Orange.widgets.data import owconcatenate
 from Orange.widgets.data.oweditdomain import disconnected
 from orangewidget.utils.listview import ListViewSearch
 
+class DiscDomainModel(DomainModel):
 
+    def data(self, index, role=Qt.DisplayRole):
+        value = super().data(index, role)
+        if role == Qt.DisplayRole:
+            try:
+                values = index.data(Qt.UserRole)
+            except TypeError:
+                pass  # don't have user role (yet)
+            else:
+                if type(value) is str:
+                    value += f" ({values})"
+        return value
+    
 def _restore_selected_items(model, view, setting, connector):
     selection = QItemSelection()
     sel_model: QItemSelectionModel = view.selectionModel()
@@ -90,12 +103,12 @@ def combine_visimg(data, polangles):
     attsdict = {'visible_images': atts}
     return attsdict
 
-def run(data, feature, alpha, map_x, map_y, invert_angles, polangles, average,
+def run(data, feature, alphas, map_x, map_y, invert_angles, polangles, average,
         sep, state: TaskState):
 
     results = Results()
 
-    output, model, spectra, origmetas, errorstate = process_polar_abs(data, alpha, feature, map_x,
+    output, model, spectra, origmetas, errorstate = process_polar_abs(data, alphas, feature, map_x,
                                                     map_y, invert_angles, polangles, average, state)
 
 
@@ -190,7 +203,7 @@ def orfunc(alpha,a0,a1,a2):
         return ((Dmin-1)/(Dmin+2)*(2/(3*np.cos(np.radians(alpha))**2-1)))
     return None
 
-def find_az(alpha, params):
+def find_az(params):
     Az0 = calc_angles(params[0],params[1])
     Abs0 = azimuth(Az0, *params)
     Az1 = calc_angles(params[0],params[1])+90
@@ -222,10 +235,10 @@ def compute(xys, yidx, smms, shapes, dtypes, polangles):
     x = np.asarray(polangles)
 
     for i in range(yidx[0], yidx[1]):#y-values(rows)
-        if vars[1] != 0:
+        if vars[-1] != 0:
             break
         for j in enumerate(xys[0]):#x-values(cols)
-            if vars[1] != 0:
+            if vars[-1] != 0:
                 break
             for l in range(cvs.shape[2]):
                 if np.any(np.isnan(cvs[i,j[0],l,:]), axis=0):
@@ -243,12 +256,12 @@ def compute(xys, yidx, smms, shapes, dtypes, polangles):
                 ss_res = np.sum(residuals**2)
                 ss_tot = np.sum((temp-np.mean(temp))**2)
                 if ss_tot == 0:
-                    vars[1] = 1
+                    vars[-1] = 1
                     break
                 out[i,j[0],l,6] = 1-(ss_res/ss_tot)
                 mod[i,j[0],l,2] = 1-(ss_res/ss_tot)
-                out[i,j[0],l,2] = find_az(vars[0], params)
-                out[i,j[0],l,3] = orfunc(vars[0], *params)
+                out[i,j[0],l,2] = find_az(params)
+                out[i,j[0],l,3] = orfunc(vars[l], *params)
                 out[i,j[0],l,4] = params[2]
                 out[i,j[0],l,5] = ampl2(params[0],params[1])
                 mod[i,j[0],l,3] = params[0]
@@ -305,7 +318,7 @@ def start_compute(ulsxs, ulsys, names, shapes, dtypes, polangles, state):
         #     compute(tlsxys, yidx, shapes, dtypes, polangles, i)
     return threads
 
-def process_polar_abs(images, alpha, feature, map_x, map_y, invert, polangles, average, state):
+def process_polar_abs(images, alphas, feature, map_x, map_y, invert, polangles, average, state):
     state.set_status("Preparing...")
 
     ulsxs, ulsys = unique_xys(images, map_x, map_y)
@@ -330,7 +343,7 @@ def process_polar_abs(images, alpha, feature, map_x, map_y, invert, polangles, a
     out = np.full((np.shape(ulsys)[0], np.shape(ulsxs)[0], len(featnames), 7), np.nan)
     mod = np.full((np.shape(ulsys)[0], np.shape(ulsxs)[0], len(featnames), 6), np.nan)
     coords = np.full((np.shape(ulsys)[0], np.shape(ulsxs)[0], 2), np.nan)
-    vars = np.asarray([alpha, 0])
+    vars = np.hstack((np.asarray(alphas),0))
     fill = np.full((np.shape(ulsys)[0], np.shape(ulsxs)[0]), np.nan)
 
     for i, j in enumerate(images):
@@ -432,7 +445,7 @@ def process_polar_abs(images, alpha, feature, map_x, map_y, invert, polangles, a
     spectra = np.concatenate((spectra), axis=0)
     meta = np.concatenate((met), axis=0)
 
-    return outputs, model, spectra, meta, vars[1]
+    return outputs, model, spectra, meta, vars[-1]
 
 
 class OWPolar(OWWidget, ConcurrentWidgetMixin):
@@ -469,6 +482,7 @@ class OWPolar(OWWidget, ConcurrentWidgetMixin):
     average = Setting(False, schema_only=True)
     angles = ContextSetting(None, exclude_attributes=True, exclude_class_vars=True)
     spec_type = Setting(0)
+    alphas: List[float] = ContextSetting([])
     feats: List[Variable] = ContextSetting([])
 
     class Warning(OWWidget.Warning):
@@ -534,7 +548,7 @@ class OWPolar(OWWidget, ConcurrentWidgetMixin):
         #col 2
         vbox1 = gui.vBox(hbox, "Features")
 
-        self.featureselect = DomainModel(DomainModel.SEPARATED,
+        self.featureselect = DiscDomainModel(DomainModel.SEPARATED,
             valid_types=ContinuousVariable)
         self.feat_view = ListViewSearch(selectionMode=QListView.ExtendedSelection)
         self.feat_view.setModel(self.featureselect)
@@ -546,6 +560,9 @@ class OWPolar(OWWidget, ConcurrentWidgetMixin):
                                             view=self.feat_view,
                                             setting=self.feats,
                                             connector=self._feat_changed))
+
+        gui.button(vbox1, self, "Don't use selected features",
+                   callback=self.remove_feat)
 
         #col 3
         vbox = gui.vBox(hbox, None)
@@ -576,9 +593,9 @@ class OWPolar(OWWidget, ConcurrentWidgetMixin):
         vbox.layout().addWidget(form)
 
         pbox = gui.widgetBox(vbox, "Parameters", sizePolicy=(QSizePolicy.Minimum, QSizePolicy.Fixed))
-        gui.lineEdit(pbox, self, "alpha", u"TDM Tilt (\N{DEGREE SIGN})",
-                     callback=self._change_input, valueType=int,
-                     validator=QIntValidator(0, 90), tooltip= \
+        self.alphaedit = gui.lineEdit(pbox, self, "alpha", u"TDM Tilt (\N{DEGREE SIGN})",
+                     callback=self.change_alphas, valueType=float,
+                     validator=QDoubleValidator(0.00, 90.00, 2), tooltip= \
                          "The angle (in degrees) between the long axis of the molecule and the transition dipole moment")
 
         gui.checkBox(pbox, self, 'invert_angles', label="Invert Angles",
@@ -603,18 +620,65 @@ class OWPolar(OWWidget, ConcurrentWidgetMixin):
         self._change_input()
         self.contextAboutToBeOpened.connect(lambda x: self.init_attr_values(x[0]))
 
+    def sort_row(self, unsorted):
+        row, feats, alphas = list(zip(*[unsorted]))
+        return row
+
+    def sort_feats(self):
+        model = self.feat_view.model()
+        rows = [model.indexOf(row) for row in self.feats]
+        featalphas = list(zip(rows, self.feats, self.alphas))
+        temp = sorted(featalphas, key=self.sort_row)
+        rows, feats, alphas = list(zip(*temp))
+        self.feats = list(feats)
+        self.alphas = list(alphas)
 
     def _feat_changed(self):
         self.Warning.nofeat.clear()
         rows = self.feat_view.selectionModel().selectedRows()
-        values = self.feat_view.model()[:]
-        self.feats = [values[row.row()] for row in sorted(rows)]
+        model = self.feat_view.model()
+        for row in rows:
+            if model[:][row.row()] not in self.feats:
+                self.feats.append(model[:][row.row()])
+                self.alphas.append(self.alpha)
+                model.setData(model.index(row.row()),
+                              f'TDM = {self.alpha}\N{DEGREE SIGN}',
+                              role=Qt.UserRole)
+        self.sort_feats()
         if len(rows) > 0:
             self.Warning.nofeat.clear()
         else:
             self.Warning.nofeat()
             return
         self.commit.deferred()
+
+    def remove_feat(self):
+        rows = self.feat_view.selectionModel().selectedRows()
+        model = self.feat_view.model()
+        for row in rows:
+            idx = self.feats.index(model[:][row.row()])
+            self.feats.remove(model[:][row.row()])
+            self.alphas.pop(idx)
+            model.setData(model.index(row.row()), 'Not used', role=Qt.UserRole)
+
+    def change_alphas(self):
+        model = self.feat_view.model()
+        rows = self.feat_view.selectionModel().selectedRows()
+        for row in rows:
+            try:
+                idx = self.feats.index(model[:][row.row()])
+            except ValueError:
+                self._feat_changed()
+                idx = self.feats.index(model[:][row.row()])
+            self.alphas[idx] = self.alpha
+            model.setData(model.index(row.row()), f"TDM = {self.alpha}\N{DEGREE SIGN}", role=Qt.UserRole)
+
+    def restore_alphas(self):
+        rows = self.feat_view.selectionModel().selectedRows()
+        model = self.feat_view.model()
+        for row in rows:
+            idx = self.feats.index(model[:][row.row()])
+            model.setData(model.index(row.row()), f"TDM = {self.alphas[idx]}\N{DEGREE SIGN}", role=Qt.UserRole)
 
     def init_attr_values(self, data):
         domain = data.domain if data is not None else None
@@ -626,6 +690,7 @@ class OWPolar(OWWidget, ConcurrentWidgetMixin):
         self.map_x = self.x_axis[0] if self.x_axis else None
         self.map_y = self.y_axis[1] if len(self.y_axis) >= 2 \
             else self.map_x
+        self.restore_alphas()
 
     def _change_input(self):
         self.commit.deferred()
@@ -821,6 +886,10 @@ class OWPolar(OWWidget, ConcurrentWidgetMixin):
             self.sorted_data = [table.transform(domain1) for table in tables]
             self.openContext(Table.from_domain(domain2))
 
+        for i in range(len(self.feat_view.model())):
+            self.feat_view.model().setData(self.feat_view.model().index(i), 'Not used', role=Qt.UserRole)
+        self.restore_alphas()
+
         self.commit.now()
 
     @gui.deferred
@@ -858,7 +927,7 @@ class OWPolar(OWWidget, ConcurrentWidgetMixin):
             if any(i not in sorted_data[0].domain.attributes for i in self.feats):
                 self.Information.meta_calc()
 
-        self.start(run, sorted_data, list(self.feats), self.alpha, self.map_x,
+        self.start(run, sorted_data, list(self.feats), self.alphas, self.map_x,
                    self.map_y, self.invert_angles, list(self.polangles),
                    self.average, self.angles)
 
