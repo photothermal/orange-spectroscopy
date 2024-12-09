@@ -1,5 +1,6 @@
 import unittest
 import numpy as np
+from AnyQt.QtCore import QItemSelectionModel, QItemSelection, QItemSelectionRange
 import Orange
 from Orange.data import ContinuousVariable, DiscreteVariable, Domain
 from Orange.widgets.tests.base import WidgetTest
@@ -67,7 +68,7 @@ class TestOWPolar(WidgetTest):
                                  self.widget.feat_view.model()[:][3]]
         self.assertEqual(self.widget.feats[0], self.multifile.domain.metas[3])
         self.assertEqual(self.widget.feats[1], self.multifile.domain.metas[4])
-        self.widget.alpha = 0
+        self.widget.alphas = [0, 0]
         self.widget.invert_angles = True
         self.widget.autocommit = True
         self.commit_and_wait(self.widget, 20000)
@@ -112,7 +113,7 @@ class TestOWPolar(WidgetTest):
                          self.in1.domain.metas[2].copy(compute_value=None))
         self.assertEqual(self.widget.feats[1],
                          self.in1.domain.metas[3].copy(compute_value=None))
-        self.widget.alpha = 0
+        self.widget.alphas = [0, 0]
         self.widget.invert_angles = True
         self.widget.autocommit = True
         self.commit_and_wait(self.widget, 20000)
@@ -150,7 +151,7 @@ class TestOWPolar(WidgetTest):
         self.widget.map_y = self.widget.y_axis[1]
         self.widget.feats = [self.widget.feat_view.model()[:][2],
                                  self.widget.feat_view.model()[:][3]]
-        self.widget.alpha = 0
+        self.widget.alphas = [0, 0]
         self.widget.invert_angles = True
         self.widget.autocommit = True
         self.commit_and_wait(self.widget, 20000)
@@ -239,6 +240,7 @@ class TestOWPolar(WidgetTest):
 
         self.widget.polangles = [0.0,45.0,90.0,135.0]
         self.widget.feats = [self.widget.feat_view.model()[:][0]]
+        self.widget.alphas = [0]
         self.commit_and_wait(self.widget)
         self.assertTrue(self.widget.Warning.XYfeat.is_shown())
 
@@ -257,7 +259,7 @@ class TestOWPolar(WidgetTest):
         self.widget.angles = self.widget.anglemetas[0]
         self.widget.map_x = self.widget.x_axis[0]
         self.widget.map_y = self.widget.y_axis[1]
-        self.widget.alpha = 0
+        self.widget.alphas = [0, 0]
         self.widget.invert_angles = True
         self.widget.autocommit = True
         self.widget.feats = [self.widget.feat_view.model()[:][2],
@@ -266,6 +268,36 @@ class TestOWPolar(WidgetTest):
         self.wait_until_stop_blocking()
         self.send_signal("Data", None, 0, widget=self.widget)
 
+    def test_alpha_changes(self):
+        self.send_signal("Data", self.multifile, 0, widget=self.widget)
+        self.widget.angles = self.widget.anglemetas[0]
+        self.widget.map_x = self.widget.x_axis[0]
+        self.widget.map_y = self.widget.y_axis[1]
+        self.widget.alpha = 0
+        vars = [self.widget.feat_view.model()[:][2],
+                self.widget.feat_view.model()[:][3]]
+        view = self.widget.feat_view
+        model = self.widget.featureselect
+        update_selection(model, view, vars)
+        self.widget.change_alphas()
+        self.assertEqual(self.widget.alphas, [0, 0])
+        self.widget.alpha = 90
+        update_selection(model, view, [vars[1]])
+        self.widget.change_alphas()
+        self.assertEqual(self.widget.alphas, [0, 90])
+        update_selection(model, view, [vars[0]])
+        self.widget.change_alphas()
+        self.assertEqual(self.widget.alphas, [90, 90])
+
+def update_selection(model, view, setting):
+    selection = QItemSelection()
+    sel_model = view.selectionModel()
+    model_values = model[:]
+    for var in setting:
+        index = model_values.index(var)
+        model_index = view.model().index(index, 0)
+        selection.append(QItemSelectionRange(model_index))
+    sel_model.select(selection, QItemSelectionModel.ClearAndSelect)
     # def test_clearangles(self):
     #     #test clearing angles
     #     pass
