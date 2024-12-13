@@ -2,8 +2,6 @@ from unittest import TestCase, skipIf
 
 import numpy as np
 
-import pkg_resources
-import sklearn
 from sklearn.cross_decomposition import PLSRegression
 
 from Orange.data import Table, Domain, ContinuousVariable
@@ -25,9 +23,6 @@ def table(rows, attr, vars):
 
 def coefficients(sklmodel):
     coef = sklmodel.coef_
-    # 1.3 has transposed coef_
-    if pkg_resources.parse_version(sklearn.__version__) < pkg_resources.parse_version("1.3.0"):
-        coef = coef.T
     return coef
 
 
