@@ -460,6 +460,8 @@ class OWPolar(OWWidget, ConcurrentWidgetMixin):
 
     icon = "icons/polar.svg"
 
+    settings_version = 2
+
     # Define inputs and outputs
     class Inputs:
         data = MultiInput("Data", Orange.data.Table, default=True)
