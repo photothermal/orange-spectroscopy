@@ -662,6 +662,7 @@ class OWPolar(OWWidget, ConcurrentWidgetMixin):
             self.feats.remove(model[:][row.row()])
             self.alphas.pop(idx)
             model.setData(model.index(row.row()), 'Not used', role=Qt.UserRole)
+        self.commit.deferred()
 
     def change_alphas(self):
         model = self.feat_view.model()
@@ -674,6 +675,7 @@ class OWPolar(OWWidget, ConcurrentWidgetMixin):
                 idx = self.feats.index(model[:][row.row()])
             self.alphas[idx] = self.alpha
             model.setData(model.index(row.row()), f"TDM = {self.alpha}\N{DEGREE SIGN}", role=Qt.UserRole)
+        self.commit.deferred()
 
     def restore_alphas(self):
         rows = self.feat_view.selectionModel().selectedRows()
