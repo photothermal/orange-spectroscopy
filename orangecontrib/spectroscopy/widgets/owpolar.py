@@ -131,7 +131,7 @@ def run(data, feature, alphas, map_x, map_y, invert_angles, polangles, average,
     ometadom = data[0].domain.metas
     if average is False:
         values = tuple(f'{i} Degrees' for i in polangles)
-        PolAng = DiscreteVariable.make('Polarisation Angle', values=values)
+        PolAng = DiscreteVariable.make('Polarization Angle', values=values)
         outmetadom = (ometadom + tuple([PolAng]) + tuple(outaddmetas))
         modmetadom = (ometadom + tuple([PolAng]) + tuple(modaddmetas))
         output_stack = tuple(output for i in polangles)
@@ -451,12 +451,12 @@ def process_polar_abs(images, alphas, feature, map_x, map_y, invert, polangles, 
 class OWPolar(OWWidget, ConcurrentWidgetMixin):
 
     # Widget's name as displayed in the canvas
-    name = "4+ Angle Polarisation"
+    name = "4+ Angle Polarization"
 
     # Short widget description
     description = (
         "Calculate Azimuth Angle, Orientation function, Amplitude and Intensity of "
-        "vibrational mode(s) using polarised data measured at 4 or more polarisation angles.")
+        "vibrational mode(s) using polarized data measured at 4 or more polarization angles.")
 
     icon = "icons/polar.svg"
 
@@ -492,7 +492,7 @@ class OWPolar(OWWidget, ConcurrentWidgetMixin):
         # noang = Msg("Must receive 4 angles at specified polarisation")
         nofeat = Msg("Select one or more Features to calculate orientations with")
         noxy = Msg("Select X and Y variables")
-        pol = Msg("Invalid Polarisation angles")
+        pol = Msg("Invalid Polarization angles")
         notenough = Msg("Must have >= 4 angles")
         wrongdata = Msg("Model returns inf. Inappropriate data")
         # tomany = Msg("Widget must receive data at data input or discrete angles only")
