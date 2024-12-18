@@ -21,12 +21,13 @@ If you use this widget for your data analysis, please cite the articles in which
 1. Inputs: Define the polarisation angles of the input dataset. Data can be passed to widget with two methods:
     - *Multifile Input*: A single input with data from all polarisation angles in a single dataset. (Each polarisation angle must be separated with a categorical variable).
     - *Multiple Inputs*: 1 input per polarisation angle.
-2. Features: Select the features to calculate the orientation of.
+2. Features: Select the features to calculate the orientation of. Features are selected by clicking on the desired feature(s) and assigning a TDM value (see point 5). A default value is assigned using the current value in the "TDM Tilt (°)" box, changing this value will change the associated value of the selected feature(s). Deselecting features will not remove them from the list to be calculated, only features with ("Not used") will not be calculated (see point 8).
 3. Data XY Selection: Define the attributes for the x and y axes for 2D datasets.
 4. Spectra Type: The type of spectra on the input. A conversion to *Absorptance* is performed before calculating orientation information when *Absorbance* or *Transmittance* is selected (this does not affect meta and class variables).
 5. TDM Tilt (°): The angle of the Transition Dipole Moment with respect to the molecular axis. Used in calculation of the value of Herman's orientation function.
 6. Invert Angles: Invert the calculated Azimuth Angles about the 0 degree axis (i.e. so that 90 degrees is output as -90 degrees).
 7. Average Spectra: Average all output variables across polarisation angles.
+8. Don't use selected features: Remove the selected features from the list to be used in calculations
 
 Input Examples
 -------
