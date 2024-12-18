@@ -4,6 +4,7 @@ import numpy as np
 from Orange.data import FileFormat
 
 from orangecontrib.spectroscopy.io.util import SpectralFileFormat, _spectra_from_image
+from orangecontrib.spectroscopy.io.soleil import HDF5Reader_HERMES
 
 
 class HDRReader_STXM(FileFormat, SpectralFileFormat):
@@ -106,3 +107,23 @@ class HDRReader_STXM(FileFormat, SpectralFileFormat):
         y_loc = axes[0]['Points']
         features = np.asarray(axes[2]['Points'])
         return _spectra_from_image(spectra, features, x_loc, y_loc)
+
+
+class HDF5Reader_SoftiMAX(FileFormat, SpectralFileFormat):
+    """ A very case specific reader for HDF5 files from the SoftiMAX beamline in MAX-IV"""
+    EXTENSIONS = ('.hdf5',)
+    DESCRIPTION = 'HDF5 file @SoftiMAX/MAX-IV'
+    PRIORITY = HDF5Reader_HERMES.PRIORITY + 1
+
+    def read_spectra(self):
+        import h5py
+        with h5py.File(self.filename, 'r') as hdf5_file:
+            if 'entry1/collection/beamline' in hdf5_file and \
+                    hdf5_file['entry1/collection/beamline'][()].astype('str') == ['SLS Sophie at Softimax MAXIV']:
+                x_locs = np.array(hdf5_file['entry1/counter0/sample_x'])
+                y_locs = np.array(hdf5_file['entry1/counter0/sample_y'])
+                energy = np.array(hdf5_file['entry1/counter0/energy'])
+                intensities = np.array(hdf5_file['entry1/counter0/data']).T
+                return _spectra_from_image(intensities, energy, y_locs, x_locs)
+            else:
+                raise IOError("Not a SoftiMAX file")
