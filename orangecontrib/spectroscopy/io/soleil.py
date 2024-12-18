@@ -59,9 +59,9 @@ class HDF5Reader_SoftiMAX(FileFormat, SpectralFileFormat):
     """ A very case specific reader for HDF5 files from the SoftiMAX beamline in MAX-IV"""
     EXTENSIONS = ('.hdf5',)
     DESCRIPTION = 'HDF5 file @SoftiMAX/MAX-IV'
+    PRIORITY = HDF5Reader_HERMES.PRIORITY + 1
 
     def read_spectra(self):
-        print("SoftiMax")
         import h5py
         with h5py.File(self.filename, 'r') as hdf5_file:
             if 'entry1/collection/beamline' in hdf5_file and \
