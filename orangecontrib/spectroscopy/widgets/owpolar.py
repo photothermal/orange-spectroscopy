@@ -286,8 +286,10 @@ def unique_xys(images, map_x, map_y):
 def start_compute(ulsxs, ulsys, names, shapes, dtypes, polangles, state):
     # single core processing is faster for small data sets and small number of selected features
     # if <data size> > x:
-    ncpu = os.cpu_count()
+    # ncpu = os.cpu_count()
     # ncpu = 6
+    env_proc = os.getenv('QUASAR_N_PROCESSES')
+    ncpu = os.cpu_count() if env_proc == "all" else int(env_proc) if env_proc else min(2, os.cpu_count())
     tulsys = np.array_split(ulsys, ncpu)
     state.set_status("Calculating...")
     threads=[]
