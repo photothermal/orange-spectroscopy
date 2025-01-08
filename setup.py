@@ -126,13 +126,13 @@ if __name__ == '__main__':
         data_files=DATA_FILES,
         install_requires=[
             'setuptools>=51.0.0',  # same as the last one needed for Orange3
-            'pip>=19.3',  # same as for Orange 3.37
+            'pip>=19.3',  # same as for Orange 3.38
             'numpy>=1.21.0,<2.0.0',
-            'Orange3>=3.37.0',
-            'orange-canvas-core>=0.2.0',
-            'orange-widget-base>=4.23.0',
+            'Orange3>=3.38.0',
+            'orange-canvas-core>=0.2.4',
+            'orange-widget-base>=4.25.0',
             'scipy>=1.9.0',
-            'scikit-learn>=1.3.0',
+            'scikit-learn>=1.5.1',
             'spectral>=0.22.3,!=0.23',
             'serverfiles>=0.2',
             'AnyQt>=0.2.0',
