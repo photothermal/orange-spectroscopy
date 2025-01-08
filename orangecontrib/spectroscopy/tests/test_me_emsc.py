@@ -214,7 +214,7 @@ class TestME_EMSC(unittest.TestCase, TestCommonIndpSamplesMixin):
         # it was crashing before
         ME_EMSC(reference=reference)(self.spectra)
 
-    def disabled_test_eq(self):
+    def test_eq(self):
         ref = self.reference
         spectra = self.spectra
         d1 = ME_EMSC(reference=ref, ncomp=False, weights=False, max_iter=1)(spectra)

@@ -13,6 +13,7 @@ from orangecontrib.spectroscopy.tests.test_owspectra import wait_for_graph
 from orangecontrib.spectroscopy.widgets.owpreprocess import OWPreprocess
 from orangecontrib.spectroscopy.widgets.preprocessors.misc import \
     CutEditor, SavitzkyGolayFilteringEditor
+from orangecontrib.spectroscopy.widgets.preprocessors.normalize import NormalizeEditor
 from orangecontrib.spectroscopy.widgets.preprocessors.registry import preprocess_editors
 from orangecontrib.spectroscopy.widgets.preprocessors.utils import BaseEditorOrange, \
     REFERENCE_DATA_PARAM
@@ -168,6 +169,16 @@ class TestOWPreprocess(WidgetTest):
         d = self.get_output(self.widget.Outputs.preprocessed_data)
         manual = p(data)
         np.testing.assert_equal(d.X, manual.X)
+
+    def test_long_preprocessor_list(self):
+        # Domain.__eq__ used to be inefficient
+        # this test never finished with enabled __eq__ and __hash__ and Orange < 3.38
+        data = SMALL_COLLAGEN
+        self.send_signal(self.widget.Inputs.data, data)
+        for _ in range(5):
+            self.widget.add_preprocessor(pack_editor(NormalizeEditor))
+        self.widget.commit.now()
+        self.wait_until_finished()
 
     def test_invalid_preprocessors(self):
         settings = {"storedsettings":
