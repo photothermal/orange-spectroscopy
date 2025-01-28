@@ -691,7 +691,7 @@ def main(argv=sys.argv):
 
     ow.set_data(dataset)
     ow.handleNewSignals()
-    app.exec_()
+    app.exec()
     ow.set_data(None)
     ow.handleNewSignals()
     return 0
