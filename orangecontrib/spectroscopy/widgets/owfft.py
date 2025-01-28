@@ -1,7 +1,6 @@
-import sys
 import numpy as np
 
-from AnyQt.QtWidgets import QGridLayout, QApplication
+from AnyQt.QtWidgets import QGridLayout
 
 import Orange.data
 from Orange.data import ContinuousVariable, Domain, Table
@@ -669,32 +668,18 @@ class OWFFT(OWWidget):
 
         return wavenumbers, spectra
 
-# Simple main stub function in case being run outside Orange Canvas
-def main(argv=sys.argv):
+
+def load_test_gsf() -> Orange.data.Table:
+    """Load a NeaSpec interferogram GSF file and return a Table object."""
     from orangecontrib.spectroscopy.io.neaspec import NeaReaderGSF
     from Orange.data.io import FileFormat
     from Orange.data import dataset_dirs
 
     fn = 'NeaReaderGSF_test/NeaReaderGSF_test O2A raw.gsf'
     absolute_filename = FileFormat.locate(fn, dataset_dirs)
-    data = NeaReaderGSF(absolute_filename).read()
+    return NeaReaderGSF(absolute_filename).read()
 
-    app = QApplication(list(argv))
-    filename = "IFG_single.dpt"
-
-    ow = OWFFT()
-    ow.show()
-    ow.raise_()
-
-    dataset = Orange.data.Table(filename)
-    dataset = data #ComplexFFT, this line can be commented
-
-    ow.set_data(dataset)
-    ow.handleNewSignals()
-    app.exec()
-    ow.set_data(None)
-    ow.handleNewSignals()
-    return 0
-
-if __name__ == "__main__":
-    sys.exit(main())
+if __name__ == "__main__":  # pragma: no cover
+    # pylint: disable=ungrouped-imports
+    from Orange.widgets.utils.widgetpreview import WidgetPreview
+    WidgetPreview(OWFFT).run(load_test_gsf())
