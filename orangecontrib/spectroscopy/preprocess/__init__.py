@@ -483,11 +483,9 @@ class NormalizeReference(Preprocess):
 class _NormalizePhaseReferenceCommon(CommonDomainRef):
 
     def transformed(self, data):
-        if len(data):
-            ref_X = self.interpolate_extend_to(self.reference, getx(data))
-            return replace_infs(np.angle(np.exp(data.X * 1j) / np.exp(ref_X * 1j)))
-        else:
-            return data
+        ref_X = self.interpolate_extend_to(self.reference, getx(data))
+        return replace_infs(np.angle(np.exp(data.X * 1j) / np.exp(ref_X * 1j)))
+
 
 
 class NormalizePhaseReference(NormalizeReference):
