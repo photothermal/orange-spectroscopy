@@ -127,7 +127,7 @@ if __name__ == '__main__':
         install_requires=[
             'setuptools>=51.0.0',  # same as the last one needed for Orange3
             'pip>=19.3',  # same as for Orange 3.38
-            'numpy>=1.21.0,<2.0.0',
+            'numpy>=1.24.0',
             'Orange3>=3.38.0',
             'orange-canvas-core>=0.2.4',
             'orange-widget-base>=4.25.0',

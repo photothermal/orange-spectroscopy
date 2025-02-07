@@ -129,7 +129,7 @@ class TestOWPeakFit(WidgetTest):
         data = Orange.data.Table('iris')
         self.send_signal("Data", data)
         # fixing getx output type fixes the bug
-        self.assertEqual(getx(data).dtype, np.float_)
+        self.assertEqual(getx(data).dtype, np.float64)
         self.widget.add_preprocessor(pack_model_editor(GaussianModelEditor))
         self.widget.commit.now()
         wait_for_preview(self.widget, 10000)

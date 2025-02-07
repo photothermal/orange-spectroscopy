@@ -21,7 +21,7 @@ class TestCut(unittest.TestCase, TestCommonIndpSamplesMixin):
     def test_cut_both(self):
         d = self.collagen
         dcut = Cut(lowlim=0, highlim=2)(d)
-        self.assertFalse(getx(dcut))
+        self.assertEqual(len(getx(dcut)), 0)
         dcut = Cut(lowlim=1000, highlim=1100)(d)
         self.assertGreaterEqual(min(getx(dcut)), 1000)
         self.assertLessEqual(max(getx(dcut)), 1100)
