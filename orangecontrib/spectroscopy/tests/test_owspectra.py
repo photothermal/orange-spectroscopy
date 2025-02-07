@@ -68,7 +68,7 @@ class TestOWSpectra(WidgetTest):
         # a data set with only infs
         cls.only_inf = iris1.copy()
         with cls.only_inf.unlocked():
-            cls.only_inf.X *= np.Inf
+            cls.only_inf.X *= np.inf
         cls.strange_data = [iris1, iris0, empty, irisunknown, cls.unknown_last_instance,
                             cls.only_inf, cls.unknown_pts]
 

@@ -318,7 +318,7 @@ class ShowAverage(QObject, ConcurrentMixin):
                 cvd = data.transform(Orange.data.Domain([color_var]))
                 feature_values = cvd.X[:, 0]  # obtain 1D vector
                 for v in range(len(color_var.values)):
-                    v1 = np.in1d(feature_values, v)
+                    v1 = np.isin(feature_values, v)
                     if np.any(v1):
                         rd[color_var.values[v]] = v1
                 nanind = np.isnan(feature_values)
@@ -1700,7 +1700,7 @@ class CurvePlot(QWidget, OWComponent, SelectionGroupMixin):
         if ids is None:
             ids = []
         if self.data:
-            self.subset_indices = np.in1d(self.data.ids, ids)
+            self.subset_indices = np.isin(self.data.ids, ids)
 
     def set_data_subset(self, ids, auto_update=True):
         self.subset = ids  # an array of indices
