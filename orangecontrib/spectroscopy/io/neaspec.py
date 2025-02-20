@@ -352,16 +352,19 @@ class NeaImageGSF(FileFormat, SpectralFileFormat):
             if re.search(pattern, self.filename) is not None:
                 channel_name = re.search(pattern, self.filename)[0]
             else:
-                channel_name = ''
+                channel_name = None
 
-        if 'P' in channel_name:
-            signal_type = "Phase"
-        elif 'A' in channel_name:
-            signal_type = "Amplitude"
-        elif 'Z' in channel_name:
-            signal_type = "Topography"
+        if type(channel_name)==str:
+            if 'P' in channel_name:
+                signal_type = "Phase"
+            elif 'A' in channel_name:
+                signal_type = "Amplitude"
+            elif 'Z' in channel_name:
+                signal_type = "Topography"
+            else:
+                signal_type = "Topography"
         else:
-            signal_type = "Topography"
+            signal_type = 'Topography'
 
         X, XRr, YRr = reader_gsf(self.filename)
         features, final_data, meta_data = _spectra_from_image(X, np.array([1]), XRr, YRr)
