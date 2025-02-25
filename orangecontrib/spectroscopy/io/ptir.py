@@ -1,10 +1,12 @@
 import Orange
 import numpy as np
-from Orange.data import FileFormat, ContinuousVariable, Domain
 import io
+from Orange.data import FileFormat, ContinuousVariable, Domain
 from PIL import Image
+import h5py
 
-from orangecontrib.spectroscopy.io.util import SpectralFileFormat, _spectra_from_image, ConstantBytesVisibleImage
+from orangecontrib.spectroscopy.io.util import SpectralFileFormat, _spectra_from_image, \
+    ConstantBytesVisibleImage
 from orangecontrib.spectroscopy.utils import MAP_X_VAR, MAP_Y_VAR
 
 
@@ -16,7 +18,6 @@ class PTIRFileReader(FileFormat, SpectralFileFormat):
     data_signal = ''
 
     def get_channels(self):
-        import h5py
         hdf5_file = h5py.File(self.filename, 'r')
         keys = list(hdf5_file.keys())
 
@@ -73,12 +74,14 @@ class PTIRFileReader(FileFormat, SpectralFileFormat):
         # map checked images in file
         image_channels = []
         if 'Heightmaps' in keys:
-            for img_name in [i for i in hdf5_file['Heightmaps'].keys()]:
-                if hdf5_file['Heightmaps'][img_name].attrs['Checked'][0] == 1:
+            for img_name in list(hdf5_file['Heightmaps'].keys()):
+                img_attrs = hdf5_file['Heightmaps'][img_name].attrs
+                if 'Checked' in img_attrs.keys()and img_attrs['Checked'][0] == 1:
                     image_channels.append(img_name)
         if 'Images' in keys:
-            for img_name in [i for i in hdf5_file['Images'].keys()]:
-                if hdf5_file['Images'][img_name].attrs['Checked'][0] == 1:
+            for img_name in list(hdf5_file['Images'].keys()):
+                img_attrs = hdf5_file['Images'][img_name].attrs
+                if 'Checked' in img_attrs.keys()and img_attrs['Checked'][0] == 1:
                     image_channels.append(img_name)
 
         # Load and add image with ConstantBytesVisibleImage
@@ -89,7 +92,8 @@ class PTIRFileReader(FileFormat, SpectralFileFormat):
                 im = Image.fromarray(img[:], 'RGBA')
             elif 'Heightmap' in img_name:
                 img = hdf5_file['Heightmaps'][img_name]
-                im = Image.fromarray((img[:]/np.max(img[:]) - np.min(img[:])/np.max(img[:])) * 255, 'F')
+                im = Image.fromarray((img[:]/np.max(img[:]) \
+                                    + np.min(img[:])/np.max(img[:])) * 255, 'F')
                 im = im.convert('L')
             else:
                 continue
@@ -115,7 +119,8 @@ class PTIRFileReader(FileFormat, SpectralFileFormat):
             selected_signal = False
             for chan_name in filter(lambda s: s.startswith('Channel'), meas_keys):
                 hdf5_chan = hdf5_meas[chan_name]
-                if hdf5_chan.attrs.keys().__contains__('DataSignal') and hdf5_chan.attrs['DataSignal'] == self.data_signal:
+                if (hdf5_chan.attrs.keys().__contains__('DataSignal') and
+                        hdf5_chan.attrs['DataSignal'] == self.data_signal):
                     selected_signal = True
                     break
             if not selected_signal:
@@ -196,7 +201,8 @@ class PTIRFileReader(FileFormat, SpectralFileFormat):
                 if hyperspectra:
                     rows = meas_attrs['RangeYPoints'][0]
                     cols = meas_attrs['RangeXPoints'][0]
-                    intensities = np.reshape(data, (rows,cols,data.shape[1])) # organized rows, columns, wavelengths
+                    # organized rows, columns, wavelengths
+                    intensities = np.reshape(data, (rows,cols,data.shape[1])) 
                     break
                 else:
                     intensities.append(data[0,:])
@@ -221,19 +227,18 @@ class PTIRFileReader(FileFormat, SpectralFileFormat):
             data = additional_table.transform(domain)
             with data.unlocked():
                 data[:, new_attributes] = np.asarray(new_columns).T
-            return features, spectra, data
 
-        # locations
-        x_loc = y_loc = z_loc = np.arange(spectra.shape[0])
-        metas = np.array([x_locs[x_loc], y_locs[y_loc], z_locs[z_loc]]).T
+        else:
+            # locations
+            metas = np.vstack((x_locs, y_locs, z_locs)).T
 
-        domain = Orange.data.Domain([], None,
-                                    metas=[Orange.data.ContinuousVariable.make(MAP_X_VAR),
-                                           Orange.data.ContinuousVariable.make(MAP_Y_VAR),
-                                           Orange.data.ContinuousVariable.make("z-focus")]
-                                    )
-        data = Orange.data.Table.from_numpy(domain, X=np.zeros((len(spectra), 0)),
-                                            metas=np.asarray(metas, dtype=object))
+            domain = Orange.data.Domain([], None,
+                                        metas=[Orange.data.ContinuousVariable.make(MAP_X_VAR),
+                                               Orange.data.ContinuousVariable.make(MAP_Y_VAR),
+                                               Orange.data.ContinuousVariable.make("z-focus")]
+                                        )
+            data = Orange.data.Table.from_numpy(domain, X=np.zeros((len(spectra), 0)),
+                                                metas=np.asarray(metas, dtype=object))
 
         # Add vis and other images to data
         if visible_images:
