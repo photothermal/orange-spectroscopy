@@ -125,7 +125,7 @@ class _PCAReconstructCommon(CommonDomain):
         if self.components is not None:
             # set unused components to zero
             remove = np.ones(pca_space.shape[1])
-            remove[self.components] = 0
+            remove[:self.components] = 0
             remove = np.extract(remove, np.arange(pca_space.shape[1]))
             pca_space[:, remove] = 0
         return self.pca.proj.inverse_transform(pca_space)
