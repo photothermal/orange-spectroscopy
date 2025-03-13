@@ -13,6 +13,7 @@ import Orange
 import Orange.data
 from Orange.data import ContinuousVariable
 from Orange.preprocess.preprocess import Preprocess
+from Orange.widgets.unsupervised.owpca import MAX_COMPONENTS
 
 from orangecontrib.spectroscopy.data import getx
 
@@ -139,11 +140,11 @@ class PCADenoising(Preprocess):
 
     def __call__(self, data):
         if data and len(data.domain.attributes):
-            maxpca = min(len(data.domain.attributes), len(data))
-            pca = Orange.projection.PCA(n_components=min(maxpca, self.components),
+            maxpca = min(len(data.domain.attributes), len(data), MAX_COMPONENTS)
+            pca = Orange.projection.PCA(n_components=maxpca,
                                         random_state=self.random_state,
                                         svd_solver=self.svd_solver)(data)
-            commonfn = _PCAReconstructCommon(pca)
+            commonfn = _PCAReconstructCommon(pca, self.components)
             nats = [at.copy(compute_value=PCADenoisingFeature(i, commonfn))
                     for i, at in enumerate(data.domain.attributes)]
         else:
