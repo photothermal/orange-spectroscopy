@@ -85,7 +85,7 @@ class TestOWPeakFit(WidgetTest):
         # residuals
         self.assertEqual(len(residuals), len(self.data))
         self.assert_domain_equal(residuals.domain, self.data.domain)
-        np.testing.assert_array_equal(residuals.X, fits.X - self.data.X)
+        np.testing.assert_array_equal(residuals.X, self.data.X - fits.X)
         np.testing.assert_array_equal(residuals.Y, self.data.Y)
         np.testing.assert_array_equal(residuals.metas, self.data.metas)
         # annotated data

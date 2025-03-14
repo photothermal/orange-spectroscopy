@@ -142,7 +142,7 @@ if __name__ == '__main__':
             'extranormal3 >=0.0.3',
             'renishawWiRE>=0.1.8',
             'pillow>=9.0.0',
-            'lmfit>=1.3.2',
+            'lmfit>=1.3.3',
             'bottleneck',
             'pebble',
             'agilent-format>=0.4.5'
