@@ -1,3 +1,5 @@
+from typing import Union, Sequence
+
 import bottleneck
 import numpy as np
 
@@ -125,7 +127,10 @@ class _PCAReconstructCommon(CommonDomain):
         if self.components is not None:
             # set unused components to zero
             remove = np.ones(pca_space.shape[1])
-            remove[:self.components] = 0
+            if isinstance(self.components, int):
+                remove[:self.components] = 0
+            else:
+                remove[np.array(self.components) - 1] = 0
             remove = np.extract(remove, np.arange(pca_space.shape[1]))
             pca_space[:, remove] = 0
         return self.pca.proj.inverse_transform(pca_space)
@@ -133,7 +138,8 @@ class _PCAReconstructCommon(CommonDomain):
 
 class PCADenoising(Preprocess):
 
-    def __init__(self, components=None, random_state=0, svd_solver="randomized"):
+    def __init__(self, components: Union[None, int, Sequence[int]]=None,
+                 random_state=0, svd_solver="randomized"):
         self.components = components
         self.random_state = random_state
         self.svd_solver = svd_solver

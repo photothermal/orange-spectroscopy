@@ -589,6 +589,14 @@ class TestPCADenoising(unittest.TestCase, TestCommonMixin):
                                        [[5.08718247, 3.51315614, 1.40204280, 0.21105556],
                                         [4.75015528, 3.15366444, 1.46254138, 0.23693223]])
 
+    def test_selected_components(self):
+        data = Orange.data.Table("iris")
+        proc = PCADenoising(components=[1, 2])
+        d1 = proc(data)
+        proc2 = PCADenoising(components=2)
+        d2 = proc2(data)
+        np.testing.assert_equal(d1.X, d2.X)
+
 
 class TestMNFDenoising(unittest.TestCase, TestCommonMixin):
 
