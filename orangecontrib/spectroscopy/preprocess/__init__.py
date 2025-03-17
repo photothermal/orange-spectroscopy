@@ -130,7 +130,7 @@ class _PCAReconstructCommon(CommonDomain):
             if isinstance(self.components, int):
                 remove[:self.components] = 0
             else:
-                remove[np.array(self.components) - 1] = 0
+                remove[self.components] = 0
             remove = np.extract(remove, np.arange(pca_space.shape[1]))
             pca_space[:, remove] = 0
         return self.pca.proj.inverse_transform(pca_space)

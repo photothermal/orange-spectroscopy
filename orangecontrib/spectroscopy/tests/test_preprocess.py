@@ -591,7 +591,7 @@ class TestPCADenoising(unittest.TestCase, TestCommonMixin):
 
     def test_selected_components(self):
         data = Orange.data.Table("iris")
-        proc = PCADenoising(components=[1, 2])
+        proc = PCADenoising(components=[0, 1])
         d1 = proc(data)
         proc2 = PCADenoising(components=2)
         d2 = proc2(data)
