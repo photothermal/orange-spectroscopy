@@ -345,29 +345,33 @@ class NeaImageGSF(FileFormat, SpectralFileFormat):
     EXTENSIONS = (".gsf",)
     DESCRIPTION = 'NeaSPEC single image'
 
-    def read_spectra(self):
+    @staticmethod
+    def detect_signal_type(filename):
 
         channel_strings = ['M(.?)A', 'M(.?)P', 'O(.?)A', 'O(.?)P', 'Z C', 'Z raw']
         channel_name = None
 
         for pattern in channel_strings:
-            if re.search(pattern, self.filename) is not None:
-                channel_name = re.search(pattern, self.filename)[0]
+            if re.search(pattern, filename) is not None:
+                channel_name = re.search(pattern, filename)[0]
 
         if channel_name is None:
             signal_type = 'Topography'
+        elif 'P' in channel_name:
+            signal_type = "Phase"
+        elif 'A' in channel_name:
+            signal_type = "Amplitude"
         else:
-            if 'P' in channel_name:
-                signal_type = "Phase"
-            elif 'A' in channel_name:
-                signal_type = "Amplitude"
-            elif 'Z' in channel_name:
-                signal_type = "Topography"
-            else:
-                signal_type = "Topography"
+            signal_type = "Topography"
+
+        return signal_type
+
+    def read_spectra(self):
 
         X, XRr, YRr = reader_gsf(self.filename)
         features, final_data, meta_data = _spectra_from_image(X, np.array([1]), XRr, YRr)
+
+        signal_type = self.detect_signal_type(self.filename)
 
         meta_data.attributes["measurement.signaltype"] = signal_type
         # TODO add all the meta info here from the Gwyddion header
