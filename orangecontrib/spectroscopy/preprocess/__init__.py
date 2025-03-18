@@ -1,3 +1,5 @@
+from typing import Union, Sequence
+
 import bottleneck
 import numpy as np
 
@@ -13,6 +15,7 @@ import Orange
 import Orange.data
 from Orange.data import ContinuousVariable
 from Orange.preprocess.preprocess import Preprocess
+from Orange.widgets.unsupervised.owpca import MAX_COMPONENTS
 
 from orangecontrib.spectroscopy.data import getx
 
@@ -124,7 +127,10 @@ class _PCAReconstructCommon(CommonDomain):
         if self.components is not None:
             # set unused components to zero
             remove = np.ones(pca_space.shape[1])
-            remove[self.components] = 0
+            if isinstance(self.components, int):
+                remove[:self.components] = 0
+            else:
+                remove[self.components] = 0
             remove = np.extract(remove, np.arange(pca_space.shape[1]))
             pca_space[:, remove] = 0
         return self.pca.proj.inverse_transform(pca_space)
@@ -132,18 +138,19 @@ class _PCAReconstructCommon(CommonDomain):
 
 class PCADenoising(Preprocess):
 
-    def __init__(self, components=None, random_state=0, svd_solver="randomized"):
+    def __init__(self, components: Union[None, int, Sequence[int]]=None,
+                 random_state=0, svd_solver="randomized"):
         self.components = components
         self.random_state = random_state
         self.svd_solver = svd_solver
 
     def __call__(self, data):
         if data and len(data.domain.attributes):
-            maxpca = min(len(data.domain.attributes), len(data))
-            pca = Orange.projection.PCA(n_components=min(maxpca, self.components),
+            maxpca = min(len(data.domain.attributes), len(data), MAX_COMPONENTS)
+            pca = Orange.projection.PCA(n_components=maxpca,
                                         random_state=self.random_state,
                                         svd_solver=self.svd_solver)(data)
-            commonfn = _PCAReconstructCommon(pca)
+            commonfn = _PCAReconstructCommon(pca, self.components)
             nats = [at.copy(compute_value=PCADenoisingFeature(i, commonfn))
                     for i, at in enumerate(data.domain.attributes)]
         else:
