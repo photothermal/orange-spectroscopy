@@ -1,6 +1,4 @@
 [![DOI](https://zenodo.org/badge/53335377.svg)](https://zenodo.org/badge/latestdoi/53335377)
-[![DOI](https://doi.org/10.1080/08940886.2017.1338424)](https://doi.org/10.1080/08940886.2017.1338424)
-[![DOI](https://doi.org/10.3390/cells10092300)](https://doi.org/10.3390/cells10092300)
 
 [![Test](https://github.com/Quasars/orange-spectroscopy/actions/workflows/test.yml/badge.svg)](https://github.com/Quasars/orange-spectroscopy/actions/workflows/test.yml)
 [![Lint workflow](https://github.com/Quasars/orange-spectroscopy/actions/workflows/lint_workflow.yml/badge.svg)](https://github.com/Quasars/orange-spectroscopy/actions/workflows/lint_workflow.yml)
