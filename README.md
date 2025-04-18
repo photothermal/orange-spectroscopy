@@ -1,4 +1,5 @@
 [![DOI](https://zenodo.org/badge/53335377.svg)](https://zenodo.org/badge/latestdoi/53335377)
+
 [![Test](https://github.com/Quasars/orange-spectroscopy/actions/workflows/test.yml/badge.svg)](https://github.com/Quasars/orange-spectroscopy/actions/workflows/test.yml)
 [![Lint workflow](https://github.com/Quasars/orange-spectroscopy/actions/workflows/lint_workflow.yml/badge.svg)](https://github.com/Quasars/orange-spectroscopy/actions/workflows/lint_workflow.yml)
 [![Release](https://github.com/Quasars/orange-spectroscopy/actions/workflows/release.yml/badge.svg)](https://github.com/Quasars/orange-spectroscopy/actions/workflows/release.yml)
