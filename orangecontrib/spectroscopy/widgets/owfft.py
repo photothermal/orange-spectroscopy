@@ -68,8 +68,7 @@ class OWFFT(OWWidget):
     out_limit1 = settings.Setting(400)
     out_limit2 = settings.Setting(4000)
     autocommit = settings.Setting(False)
-    use_phaseinput_for_complexfft = settings.Setting(False)
-    asym_apod = settings.Setting(False)
+    complexfft = settings.Setting(False)
 
     sweep_opts = ("Single",
                   "Forward-Backward",
@@ -112,7 +111,7 @@ class OWFFT(OWWidget):
         self.reader = None
         if self.dx_HeNe is True:
             self.dx = 1.0 / self.laser_wavenumber / 2.0
-        self.use_polar_FFT = False
+        self.use_interleaved_data = False
 
         layout = QGridLayout()
         layout.setContentsMargins(0, 0, 0, 0)
@@ -207,9 +206,9 @@ class OWFFT(OWWidget):
         self.optionsBox = gui.widgetBox(None, "FFT Options")
         layout.addWidget(self.optionsBox, 0, 1, 3, 1)
 
-        cb0 = gui.checkBox(
-            self.optionsBox, self, "use_phaseinput_for_complexfft",
-            label="Complex FFT with phase input",
+        self.complexfft_cb = gui.checkBox(
+            self.optionsBox, self, "complexfft",
+            label="Complex FFT",
             callback=self.complex_fft_changed
             )
         
@@ -298,6 +297,9 @@ class OWFFT(OWWidget):
         """
         Receive input data.
         """
+        self.Warning.clear()
+        self.Error.clear()
+
         if dataset is not None:
             self.data = dataset
             self.determine_sweeps()
@@ -305,6 +307,8 @@ class OWFFT(OWWidget):
                                (dataset.X.shape[0],
                                 (["Single"] + 3*["Forward-Backward"])[self.sweeps]))
             self.infob.setText('%d points each' % dataset.X.shape[1])
+            self.use_interleaved_data = False
+            self.complexfft_cb.setDisabled(False)
             self.check_metadata()
             self.dataBox.setDisabled(False)
             self.optionsBox.setDisabled(False)
@@ -360,14 +364,14 @@ class OWFFT(OWWidget):
         self.commit.deferred()
 
     def complex_fft_changed(self):
-        self.configui_for_polar_FFT_inputphase()
+        self.configui_for_complex_fft()
         self.commit.deferred()
 
     @gui.deferred
     def commit(self):
         if self.data is not None:
-            if self.use_polar_FFT or self.use_phaseinput_for_complexfft:
-                self.calculate_polar_FFT()
+            if self.complexfft:
+                self.calculate_complex_FFT()
             else:
                 self.calculateFFT()
 
@@ -510,18 +514,18 @@ class OWFFT(OWWidget):
         self.Outputs.phases.send(self.phases_table)
 
 
-    def calculate_polar_FFT(self):
+    def calculate_complex_FFT(self):
 
         # Reset info, error and warning dialogs
         self.Error.clear()
         self.Warning.clear()
 
-        if self.use_phaseinput_for_complexfft:
-            amplitude_in = self.data.X
-            phases_in = self.stored_phase.X if self.stored_phase is not None else None
-        else:
+        if self.use_interleaved_data:
             amplitude_in = self.data.X[::2]
             phases_in = self.data.X[1::2]
+        else:
+            amplitude_in = self.data.X
+            phases_in = self.stored_phase.X if self.stored_phase is not None else None 
         
         if phases_in is None:
             phases_in = 0
@@ -558,19 +562,19 @@ class OWFFT(OWWidget):
             metas=self.data.domain.metas,
         )
 
-        if self.use_phaseinput_for_complexfft:
-            self.spectra_table = Table.from_numpy(
-            wavenumbers_domain, X=spectra, metas=self.data.metas
-            )
-            phases_table = Table.from_numpy(
-                wavenumbers_domain, X=phases, metas=self.data.metas
-            )
-        else:
+        if self.use_interleaved_data:
             self.spectra_table = Table.from_numpy(
                 wavenumbers_domain, X=spectra, metas=self.data.metas[::2]
             )
             phases_table = Table.from_numpy(
                 wavenumbers_domain, X=phases, metas=self.data.metas[1::2]
+            )
+        else:
+            self.spectra_table = Table.from_numpy(
+            wavenumbers_domain, X=spectra, metas=self.data.metas
+            )
+            phases_table = Table.from_numpy(
+                wavenumbers_domain, X=phases, metas=self.data.metas
             )
 
         self.Outputs.spectra.send(self.spectra_table)
@@ -625,7 +629,9 @@ class OWFFT(OWWidget):
         try:
             channel_data, detail = self.data.attributes["Channel Data Type"]
             if channel_data == "Polar":
-                self.use_polar_FFT = True
+                self.use_interleaved_data = True
+                self.complexfft = True
+                self.controls.complexfft.setDisabled(True)
                 self.infoc.setText(
                     f"Channel data type: {channel_data} ({detail}).\n"
                     + "Applying Complex Fourier Transform."
@@ -699,11 +705,11 @@ class OWFFT(OWWidget):
 
         return wavenumbers, spectra
     
-    def configui_for_polar_FFT_inputphase(self):
+    def configui_for_complex_fft(self):
         """
         Configure the GUI for polar FFT with phase from strored_phase input
         """
-        if self.use_phaseinput_for_complexfft:
+        if self.complexfft:
             self.dx_HeNe = False
             self.dx_edit.setDisabled(False)
             self.dx_HeNe_cb.setChecked(False)
@@ -729,6 +735,4 @@ def load_test_gsf() -> Orange.data.Table:
 if __name__ == "__main__":  # pragma: no cover
     # pylint: disable=ungrouped-imports
     from Orange.widgets.utils.widgetpreview import WidgetPreview
-    data = Orange.data.Table("20250412-TGQ1-O2A-ifg-lowdrift.xyz")
-    phase = Orange.data.Table("20250412-TGQ1-O2P-ifg-lowdrift.xyz")
-    WidgetPreview(OWFFT).run(set_data=data,set_stored_phase=phase)
+    WidgetPreview(OWFFT).run(load_test_gsf())
