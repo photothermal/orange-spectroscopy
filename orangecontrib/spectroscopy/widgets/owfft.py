@@ -211,7 +211,7 @@ class OWFFT(OWWidget):
             label="Complex FFT",
             callback=self.complex_fft_changed
             )
-        
+
         box = gui.comboBox(
             self.optionsBox, self, "apod_func",
             label="Apodization function:",
@@ -525,8 +525,8 @@ class OWFFT(OWWidget):
             phases_in = self.data.X[1::2]
         else:
             amplitude_in = self.data.X
-            phases_in = self.stored_phase.X if self.stored_phase is not None else None 
-        
+            phases_in = self.stored_phase.X if self.stored_phase is not None else None
+
         if phases_in is None:
             phases_in = 0
             self.Warning.complex_data_phase_zero()
@@ -642,7 +642,7 @@ class OWFFT(OWWidget):
             domain_units, dx = self.data.attributes["Calculated Datapoint Spacing (Δx)"]
             if domain_units != "[cm]" or not dx:
                 raise KeyError
-            
+
             self.dx = dx
             self.zff = 2
             self.dx_HeNe = False
@@ -691,7 +691,7 @@ class OWFFT(OWWidget):
 
         self.dx = (1 / lwn / 2 ) * udr
         self.infoc.setText("{0} cm<sup>-1</sup> laser, {1} sampling interval".format(lwn, udr))
-    
+
     def limit_range(self, wavenumbers, spectra):
 
         limits = np.searchsorted(wavenumbers,
@@ -704,7 +704,7 @@ class OWFFT(OWWidget):
             spectra = spectra[:, limits[0]:limits[1]]
 
         return wavenumbers, spectra
-    
+
     def configui_for_complex_fft(self):
         """
         Configure the GUI for polar FFT with phase from strored_phase input
