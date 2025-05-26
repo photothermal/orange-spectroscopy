@@ -135,9 +135,10 @@ class TestOWFFT(WidgetTest):
         self.send_signal(self.widget.Inputs.data, self.ifg_gsf)
         self.commit_and_wait()
         # testing info panel text associated with the input file metadata
-        widget_text = self.widget.infoc.text()
-        self.assertIn('Applying Complex Fourier Transform.', widget_text)
+        widget_text = self.widget.info_dx.text()
         self.assertIn('Using Calculated Datapoint Spacing (Δx) from metadata', widget_text)
+        self.assertTrue(self.widget.use_interleaved_data)
+        self.assertTrue(self.widget.complexfft)
 
         spectra = self.get_output(self.widget.Outputs.spectra)
         phases = self.get_output(self.widget.Outputs.phases)

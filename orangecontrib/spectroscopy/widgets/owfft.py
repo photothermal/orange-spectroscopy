@@ -119,9 +119,9 @@ class OWFFT(OWWidget):
         # An info box
         infoBox = gui.widgetBox(None, "Info")
         layout.addWidget(infoBox, 0, 0, 2, 1)
-        self.infoa = gui.widgetLabel(infoBox, "No data on input.")
-        self.infob = gui.widgetLabel(infoBox, "")
-        self.infoc = gui.widgetLabel(infoBox, "")
+        self.info_type = gui.widgetLabel(infoBox, "No data on input.")
+        self.info_pts = gui.widgetLabel(infoBox, "")
+        self.info_dx = gui.widgetLabel(infoBox, "")
         gui.rubber(infoBox)
 
         # Input Data control area
@@ -297,19 +297,21 @@ class OWFFT(OWWidget):
         if dataset is not None:
             self.data = dataset
             self.determine_sweeps()
-            self.infoa.setText('%d %s interferogram(s)' %
-                               (dataset.X.shape[0],
+            self.info_type.setText('%d %s interferogram(s)' %
+                                   (dataset.X.shape[0],
                                 (["Single"] + 3*["Forward-Backward"])[self.sweeps]))
-            self.infob.setText('%d points each' % dataset.X.shape[1])
+            self.info_pts.setText('%d points each' % dataset.X.shape[1])
             self.check_metadata()
         else:
             self.data = None
             self.spectra_table = None
-            self.infoa.setText("No data on input.")
-            self.infob.setText("")
-            self.infoc.setText("")
+            self.phases_table = None
+            self.info_type.setText("No data on input.")
+            self.info_pts.setText("")
+            self.info_dx.setText("")
             self.enable_controls()
             self.Outputs.spectra.send(self.spectra_table)
+            self.Outputs.phases.send(self.phases_table)
 
     @Inputs.stored_phase
     def set_stored_phase(self, dataset):
@@ -623,9 +625,9 @@ class OWFFT(OWWidget):
                 self.complexfft = True
                 self.controls.complexfft.setDisabled(True)
                 self.configui_for_complex_fft()
-                self.infoc.setText(
-                    f"Channel data type: {channel_data} ({detail}).\n"
-                    + "Applying Complex Fourier Transform."
+                self.info_type.setText(
+                    f"{self.data.X.shape[0]} interleaved {channel_data} interferogram(s)\n"
+                    f"({detail})"
                 )
         except KeyError:
             self.use_interleaved_data = False
@@ -641,29 +643,27 @@ class OWFFT(OWWidget):
             self.controls.auto_sweeps.setDisabled(True)
             self.controls.sweeps.setDisabled(True)
 
-            self.infoc.setText(
-                self.infoc.text()
-                + "\n"
-                + "Using Calculated Datapoint Spacing (Δx) from metadata."
-            )
+            self.info_dx.setText("Using Calculated Datapoint Spacing (Δx) from metadata.")
             return
         except KeyError:
             pass
 
-        try:
-            lwn = self.data.get_column("Effective Laser Wavenumber")
-        except ValueError:
-            lwn = DEFAULT_HENE
-        else:
-            lwn = lwn[0] if (lwn == lwn[0]).all() else ValueError()
         try:
             udr = self.data.get_column("Under Sampling Ratio")
         except ValueError:
             udr = 1
         else:
             udr = udr[0] if (udr == udr[0]).all() else ValueError()
+        try:
+            lwn = self.data.get_column("Effective Laser Wavenumber")
+        except ValueError:
+            lwn = DEFAULT_HENE
+            self.info_dx.setText(f"Dataspacing not found: auto HeNe\n")
+        else:
+            lwn = lwn[0] if (lwn == lwn[0]).all() else ValueError()
+            self.info_dx.setText("")
 
-        self.infoc.setText("{0} cm<sup>-1</sup> laser, {1} sampling interval".format(lwn, udr))
+        self.info_dx.setText(self.info_dx.text() + f"{lwn} cm⁻¹ laser \n{udr} sampling interval")
         if self.dx_auto:
             self.dx = (1 / lwn / 2 ) * udr
 
