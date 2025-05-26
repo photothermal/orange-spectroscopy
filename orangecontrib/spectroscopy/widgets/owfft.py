@@ -141,6 +141,7 @@ class OWFFT(OWWidget):
             callback=self.setting_changed,
             valueType=float,
             disabled=self.dx_auto,
+            tooltip="Pathlength Step Size",
         )
         lb = gui.widgetLabel(self.dataBox, "cm")
         grid.addWidget(self.dx_auto_cb, 0, 0)
