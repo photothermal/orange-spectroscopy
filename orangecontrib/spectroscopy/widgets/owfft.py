@@ -50,6 +50,7 @@ class OWFFT(OWWidget):
 
     replaces = ["orangecontrib.infrared.widgets.owfft.OWFFT"]
 
+    settings_version = 2
     # Define widget settings
     dx_auto = settings.Setting(True)
     dx = settings.Setting(1.0 / DEFAULT_HENE / 2.0)
@@ -696,6 +697,11 @@ class OWFFT(OWWidget):
         self.controls.complexfft.setDisabled(False)
         self.controls.auto_sweeps.setDisabled(False)
         self.controls.sweeps.setDisabled(False)
+
+    @classmethod
+    def migrate_settings(cls, settings_, version):
+        if version < 2:
+            settings_["dx_auto"] = settings_["dx_HeNe"]
 
 
 def load_test_gsf() -> Orange.data.Table:

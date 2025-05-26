@@ -146,3 +146,11 @@ class TestOWFFT(WidgetTest):
         np.testing.assert_allclose(phases.X.size, (2049))
         np.testing.assert_allclose(spectra.X[0, 396:399], (23.67618359, 25.02051088, 25.82566789))
         np.testing.assert_allclose(phases.X[0, 396:399], (2.61539453, 2.65495979, 2.72814989))
+
+    def test_migrate_HeNe(self):
+        settings = {"dx_HeNe": False}
+        OWFFT.migrate_settings(settings, 1)
+        self.assertEqual(settings["dx_auto"], False)
+        settings = {"dx_HeNe": True}
+        OWFFT.migrate_settings(settings, 1)
+        self.assertEqual(settings["dx_auto"], True)
