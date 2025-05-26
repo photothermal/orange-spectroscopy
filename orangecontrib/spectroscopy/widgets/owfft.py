@@ -301,14 +301,14 @@ class OWFFT(OWWidget):
                                (dataset.X.shape[0],
                                 (["Single"] + 3*["Forward-Backward"])[self.sweeps]))
             self.infob.setText('%d points each' % dataset.X.shape[1])
-            self.use_interleaved_data = False
-            self.complexfft_cb.setDisabled(False)
             self.check_metadata()
         else:
             self.data = None
             self.spectra_table = None
             self.infoa.setText("No data on input.")
             self.infob.setText("")
+            self.infoc.setText("")
+            self.enable_controls()
             self.Outputs.spectra.send(self.spectra_table)
 
     @Inputs.stored_phase
@@ -615,19 +615,20 @@ class OWFFT(OWWidget):
 
     def check_metadata(self):
         """Look for laser wavenumber and sampling interval metadata"""
-
+        self.enable_controls()
         try:
             channel_data, detail = self.data.attributes["Channel Data Type"]
             if channel_data == "Polar":
                 self.use_interleaved_data = True
                 self.complexfft = True
                 self.controls.complexfft.setDisabled(True)
+                self.configui_for_complex_fft()
                 self.infoc.setText(
                     f"Channel data type: {channel_data} ({detail}).\n"
                     + "Applying Complex Fourier Transform."
                 )
         except KeyError:
-            pass
+            self.use_interleaved_data = False
         try:
             domain_units, dx = self.data.attributes["Calculated Datapoint Spacing (Δx)"]
             if domain_units != "[cm]" or not dx:
@@ -639,12 +640,6 @@ class OWFFT(OWWidget):
             self.dx_edit.setDisabled(self.dx_auto)
             self.controls.auto_sweeps.setDisabled(True)
             self.controls.sweeps.setDisabled(True)
-            self.controls.peak_search.setEnabled(True)
-            self.controls.zpd1.setDisabled(True)
-            self.controls.zpd2.setDisabled(True)
-            self.controls.phase_corr.setDisabled(True)
-            self.controls.phase_res_limit.setDisabled(True)
-            self.controls.phase_resolution.setDisabled(True)
 
             self.infoc.setText(
                 self.infoc.text()
@@ -689,14 +684,17 @@ class OWFFT(OWWidget):
         """
         Disable Phase correction controls when calculating a complex FFT.
         """
-        if self.complexfft:
-            self.controls.phase_corr.setDisabled(True)
-            self.controls.phase_res_limit.setDisabled(True)
-            self.controls.phase_resolution.setDisabled(True)
-        else:
-            self.controls.phase_corr.setDisabled(False)
-            self.controls.phase_res_limit.setDisabled(False)
-            self.controls.phase_resolution.setDisabled(False)
+        self.controls.phase_corr.setDisabled(self.complexfft)
+        self.controls.phase_res_limit.setDisabled(self.complexfft)
+        self.controls.phase_resolution.setDisabled(self.complexfft)
+
+    def enable_controls(self):
+        """
+        Re-enable all controls that may be disabled by check_metadata().
+        """
+        self.controls.complexfft.setDisabled(False)
+        self.controls.auto_sweeps.setDisabled(False)
+        self.controls.sweeps.setDisabled(False)
 
 
 def load_test_gsf() -> Orange.data.Table:
