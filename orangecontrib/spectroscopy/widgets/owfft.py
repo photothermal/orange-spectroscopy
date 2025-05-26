@@ -109,6 +109,7 @@ class OWFFT(OWWidget):
         self.data = None
         self.stored_phase = None
         self.spectra_table = None
+        self.phases_table = None
         self.reader = None
         self.use_interleaved_data = False
 
@@ -660,7 +661,7 @@ class OWFFT(OWWidget):
             lwn = self.data.get_column("Effective Laser Wavenumber")
         except ValueError:
             lwn = DEFAULT_HENE
-            self.info_dx.setText(f"Dataspacing not found: auto HeNe\n")
+            self.info_dx.setText("Dataspacing not found: auto HeNe\n")
         else:
             lwn = lwn[0] if (lwn == lwn[0]).all() else ValueError()
             self.info_dx.setText("")
