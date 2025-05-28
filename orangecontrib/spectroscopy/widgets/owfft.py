@@ -702,7 +702,8 @@ class OWFFT(OWWidget):
     @classmethod
     def migrate_settings(cls, settings_, version):
         if version < 2:
-            settings_["dx_auto"] = settings_["dx_HeNe"]
+            if "dx_HeNe" in settings_:
+                settings_["dx_auto"] = settings_["dx_HeNe"]
 
 
 def load_test_gsf() -> Orange.data.Table:
