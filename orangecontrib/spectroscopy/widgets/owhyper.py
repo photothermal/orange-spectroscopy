@@ -944,7 +944,7 @@ class ImageSelectionMixin:
     def add_selection_actions(self, menu):
 
         select_square = QAction(
-            "Select (square)", self, triggered=self.plot.vb.set_mode_select_square,
+            "Select (rectangle)", self, triggered=self.plot.vb.set_mode_select_square,
         )
         select_square.setShortcuts([Qt.Key_S])
         select_square.setShortcutContext(Qt.WidgetWithChildrenShortcut)
