@@ -16,10 +16,6 @@ from PIL import Image
 from orangecontrib.spectroscopy.utils import get_ndim_hyperspec
 
 from orangecontrib.spectroscopy.widgets.owhyper import BasicImagePlot
-from orangecontrib.spectroscopy.widgets.utils import (
-    SelectionGroupMixin,
-    SelectionOutputsMixin,
-)
 
 
 # Copied from orangecontrib.snom.widgets.owpreprocessimage
@@ -85,7 +81,7 @@ class OWOverlay(OWWidget):
         nan_in_image = Msg("Unknown values within images: {} unknowns")
         threshold_error = Msg("Low slider should be less than High")
 
-    class Information(SelectionOutputsMixin.Information):
+    class Information(OWWidget.Information):
         not_shown = Msg("Undefined positions: {} data point(s) are not shown.")
 
     def image_values(self):
