@@ -256,8 +256,6 @@ class OWOverlay(OWWidget):
         else:
             self.maindata = None
 
-        self.commit.deferred()
-
     @Inputs.data
     def set_overlaydata(self, data):
         self.closeContext()
@@ -274,6 +272,7 @@ class OWOverlay(OWWidget):
         self.imageplot.set_data(data)
         self.imageplot.update_view()
 
+    def handleNewSignals(self):
         self.commit.deferred()
 
     @gui.deferred
