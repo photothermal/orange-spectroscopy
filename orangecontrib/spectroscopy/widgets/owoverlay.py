@@ -3,7 +3,7 @@ import numpy as np
 from AnyQt.QtCore import Qt, QBuffer
 
 from Orange.data import Table, ContinuousVariable, Domain
-from Orange.widgets.settings import DomainContextHandler, ContextSetting
+from Orange.widgets.settings import DomainContextHandler
 from Orange.widgets.utils.itemmodels import DomainModel
 from Orange.widgets.widget import OWWidget, Input, Output, Msg
 from Orange.widgets import gui, settings
