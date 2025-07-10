@@ -48,8 +48,8 @@ class ImagePreview:
 
 
 class OWOverlay(OWWidget):
-    name = "Add Visible"
-    description = "Adds a visible image to the dataset. "
+    name = "Add Image Overlay"
+    description = ("Add an image that can be displayed in Hyper Spectra to the dataset.")
     icon = "icons/bin.svg"
 
     settings_version = 2
