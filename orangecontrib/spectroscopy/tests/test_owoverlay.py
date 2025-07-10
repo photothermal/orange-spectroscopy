@@ -64,6 +64,13 @@ class TestOWOverlay(WidgetTest):
         self.widget._update_feature_value()
         wait_for_image(self.widget)
 
+        # recommit to avoid a bug because commit functionality is not implemented asynchronously
+        # this should be removed when properly implemented
+        self.widget.commit.now()
+
+        out = self.get_output("Decorated Data")
+        self.assertIsNotNone(out.attributes['visible_images'])
+
         out = self.get_output("Decorated Data")
         self.assertIsNotNone(out.attributes["visible_images"])
 
