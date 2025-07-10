@@ -224,6 +224,7 @@ class OWOverlay(OWWidget):
             posy = ls[1][0]
 
             # Extract the image from imageplot so the coloring is done
+            self.imageplot.img.render()  # ensures qimage is produced even when not displayed
             im = self.imageplot.img.qimage
             if im is not None:
                 buffer = QBuffer()
