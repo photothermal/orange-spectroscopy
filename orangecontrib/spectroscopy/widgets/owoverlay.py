@@ -49,7 +49,7 @@ class ImagePreview:
 
 class OWOverlay(OWWidget):
     name = "Add Image Overlay"
-    description = ("Add an image that can be displayed in Hyper Spectra to the dataset.")
+    description = "Add an image that can be displayed in Hyper Spectra to the dataset."
     icon = "icons/bin.svg"
 
     settings_version = 2
@@ -206,6 +206,8 @@ class OWOverlay(OWWidget):
         self.commit.deferred()
 
     def set_vimage(self, data):
+        # Copy main data
+        newmaindata = self.maindata.copy() if self.maindata is not None else None
         # Extract the image scales
         if data is not None:
             try:
@@ -246,9 +248,14 @@ class OWOverlay(OWWidget):
                     image_bytes=img_bytes,
                 )
 
-                # Assign it to the datatable attributes
-                if self.maindata and vimage is not None:
-                    self.maindata.attributes["visible_images"] = [vimage]
+                # # Assign it to the datatable attributes
+                if newmaindata and vimage is not None:
+                    if "visible_images" in list(newmaindata.attributes):
+                        newmaindata.attributes["visible_images"].append(vimage)
+                    else:
+                        newmaindata.attributes["visible_images"] = [vimage]
+
+        return newmaindata
 
     @Inputs.maindata
     def set_data(self, data):
@@ -282,14 +289,11 @@ class OWOverlay(OWWidget):
         self.Error.invalid_axis.clear()
         self.Error.invalid_block.clear()
 
-        self.set_vimage(self.data)
-
-        self.Outputs.outdata.send(self.maindata)
+        self.Outputs.outdata.send(self.set_vimage(self.data))
 
 
 if __name__ == "__main__":  # pragma: no cover
     from Orange.widgets.utils.widgetpreview import WidgetPreview
-    import Orange.data
 
     WidgetPreview(OWOverlay).run(
         set_data=Table("agilent/5_mosaic_agg1024.dmt"),
