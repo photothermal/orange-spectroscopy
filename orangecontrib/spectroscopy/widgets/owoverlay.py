@@ -237,10 +237,26 @@ class OWOverlay(OWWidget):
                 img_bytes = io.BytesIO()
                 pil_im.save(img_bytes, format="PNG")
 
+                def get_unused_name(existing_names, base_name):
+                    if base_name not in existing_names:
+                        return base_name
+                    i = 1
+                    while f"{base_name} {i}" in existing_names:
+                        i += 1
+                    return f"{base_name} {i}"
+
+                # Update name
+                allnames = []
+                if "visible_images" in list(newmaindata.attributes):
+                    allnames = [
+                        im.name for im in newmaindata.attributes["visible_images"]
+                    ]
+                basename = "Overlay Image"
+                name = get_unused_name(allnames, basename)
                 # Need to modify the position and the scale since visual imageplot
                 # place the corner of the pixel to the given position
                 vimage = ConstantBytesVisibleImage(
-                    name="External Image",
+                    name=name,
                     pos_x=posx - xres / 2,
                     pos_y=posy - yres / 2,
                     size_x=width + xres,

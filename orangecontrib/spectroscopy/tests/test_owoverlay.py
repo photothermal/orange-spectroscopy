@@ -5,7 +5,10 @@ import numpy as np
 import Orange
 from Orange.widgets.tests.base import WidgetTest
 from orangecontrib.spectroscopy.widgets.owoverlay import OWOverlay
-from orangecontrib.spectroscopy.tests.test_owhyper import wait_for_image, TestVisibleImage
+from orangecontrib.spectroscopy.tests.test_owhyper import (
+    wait_for_image,
+    TestVisibleImage,
+)
 
 NAN = float("nan")
 
@@ -69,11 +72,11 @@ class TestOWOverlay(WidgetTest):
         self.widget.commit.now()
 
         out = self.get_output("Decorated Data")
-        self.assertIsNotNone(out.attributes['visible_images'])
+        self.assertIsNotNone(out.attributes["visible_images"])
 
     def test_add_visible_image_empty(self):
         data = self.whitelight
-        self.assertNotIn('visible_images', data.attributes)
+        self.assertNotIn("visible_images", data.attributes)
 
         self.send_signal("Data", data)
         self.send_signal("Overlay Data", data)
@@ -84,15 +87,14 @@ class TestOWOverlay(WidgetTest):
         self.widget.commit.now()
 
         out = self.get_output("Decorated Data")
-        self.assertNotIn('visible_images', data.attributes)  # don't modify original data
-        self.assertIsNotNone(out.attributes['visible_images'])
+        self.assertNotIn(
+            "visible_images", data.attributes
+        )  # don't modify original data
+        self.assertIsNotNone(out.attributes["visible_images"])
 
     def test_add_visible_image_existing(self):
-        data = Orange.data.Table(
-            "agilent/4_noimage_agg256.dat"
-        )
-        data.attributes["visible_images"] = \
-            TestVisibleImage.mock_visible_image_data()
+        data = Orange.data.Table("agilent/4_noimage_agg256.dat")
+        data.attributes["visible_images"] = TestVisibleImage.mock_visible_image_data()
 
         def names(data):
             return [im.name for im in data.attributes["visible_images"]]
@@ -109,8 +111,32 @@ class TestOWOverlay(WidgetTest):
 
         out = self.get_output("Decorated Data")
         self.assertEqual(original_names, names(data))
-        self.assertEqual(original_names + ["External Image"], names(out))
+        self.assertEqual(original_names + ["Overlay Image"], names(out))
+
+    def test_add_visible_image_samename(self):
+        data = Orange.data.Table("agilent/4_noimage_agg256.dat")
+        data.attributes["visible_images"] = TestVisibleImage.mock_visible_image_data()
+
+        # Fake that one of the images is an overlay image
+        data.attributes["visible_images"][1].name = "Overlay Image"
+
+        def names(data):
+            return [im.name for im in data.attributes["visible_images"]]
+
+        original_names = names(data)
+
+        self.send_signal("Data", data)
+        self.send_signal("Overlay Data", data)
+        wait_for_image(self.widget)
+
+        # recommit to avoid a bug because commit functionality is not implemented asynchronously
+        # this should be removed when properly implemented
+        self.widget.commit.now()
+
+        out = self.get_output("Decorated Data")
+        self.assertEqual(original_names, names(data))
+        self.assertEqual(original_names + ["Overlay Image 1"], names(out))
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()
