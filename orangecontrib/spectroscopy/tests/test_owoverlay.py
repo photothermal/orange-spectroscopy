@@ -135,7 +135,7 @@ class TestOWOverlay(WidgetTest):
 
         out = self.get_output("Decorated Data")
         self.assertEqual(original_names, names(data))
-        self.assertEqual(original_names + ["Overlay Image 1"], names(out))
+        self.assertEqual(original_names + ["Overlay Image (1)"], names(out))
 
 
 if __name__ == "__main__":

@@ -3,12 +3,13 @@ import numpy as np
 from AnyQt.QtCore import Qt, QBuffer
 
 from Orange.data import Table, ContinuousVariable, Domain
+from Orange.data.util import get_unique_names
 from Orange.widgets.settings import DomainContextHandler
 from Orange.widgets.utils.itemmodels import DomainModel
 from Orange.widgets.widget import OWWidget, Input, Output, Msg
 from Orange.widgets import gui, settings
 
-from orangewidget.settings import SettingProvider, ContextSetting, Setting
+from orangewidget.settings import SettingProvider, ContextSetting
 
 import io
 from orangecontrib.spectroscopy.io.util import ConstantBytesVisibleImage
@@ -236,23 +237,14 @@ class OWOverlay(OWWidget):
                 pil_im = pil_im.transpose(Image.FLIP_TOP_BOTTOM)
                 img_bytes = io.BytesIO()
                 pil_im.save(img_bytes, format="PNG")
-
-                def get_unused_name(existing_names, base_name):
-                    if base_name not in existing_names:
-                        return base_name
-                    i = 1
-                    while f"{base_name} {i}" in existing_names:
-                        i += 1
-                    return f"{base_name} {i}"
-
                 # Update name
                 allnames = []
-                if "visible_images" in list(newmaindata.attributes):
+                if "visible_images" in newmaindata.attributes:
                     allnames = [
                         im.name for im in newmaindata.attributes["visible_images"]
                     ]
                 basename = "Overlay Image"
-                name = get_unused_name(allnames, basename)
+                name = get_unique_names(names=allnames, proposed=basename)
                 # Need to modify the position and the scale since visual imageplot
                 # place the corner of the pixel to the given position
                 vimage = ConstantBytesVisibleImage(
@@ -266,7 +258,7 @@ class OWOverlay(OWWidget):
 
                 # # Assign it to the datatable attributes
                 if newmaindata and vimage is not None:
-                    if "visible_images" in list(newmaindata.attributes):
+                    if "visible_images" in newmaindata.attributes:
                         newmaindata.attributes["visible_images"].append(vimage)
                     else:
                         newmaindata.attributes["visible_images"] = [vimage]
