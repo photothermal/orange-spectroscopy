@@ -267,19 +267,13 @@ class OWOverlay(OWWidget):
 
     @Inputs.maindata
     def set_data(self, data):
-        if data is not None:
-            self.maindata = data
-        else:
-            self.maindata = None
+        self.maindata = data
 
     @Inputs.data
     def set_overlaydata(self, data):
         self.closeContext()
         self.openContext(data)
-        if data is not None:
-            self.data = data
-        else:
-            self.data = None
+        self.data = data
 
         self.Warning.nan_in_image.clear()
         self.Error.invalid_axis.clear()
