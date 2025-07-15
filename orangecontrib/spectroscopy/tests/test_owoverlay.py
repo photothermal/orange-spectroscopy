@@ -65,11 +65,6 @@ class TestOWOverlay(WidgetTest):
         self.send_signal("Overlay Data", data)
         self.widget._attr_changed()
         self.widget._update_feature_value()
-        wait_for_image(self.widget)
-
-        # recommit to avoid a bug because commit functionality is not implemented asynchronously
-        # this should be removed when properly implemented
-        self.widget.commit.now()
 
         out = self.get_output("Decorated Data")
         self.assertIsNotNone(out.attributes["visible_images"])
@@ -80,11 +75,6 @@ class TestOWOverlay(WidgetTest):
 
         self.send_signal("Data", data)
         self.send_signal("Overlay Data", data)
-        wait_for_image(self.widget)
-
-        # recommit to avoid a bug because commit functionality is not implemented asynchronously
-        # this should be removed when properly implemented
-        self.widget.commit.now()
 
         out = self.get_output("Decorated Data")
         self.assertNotIn(
@@ -103,11 +93,6 @@ class TestOWOverlay(WidgetTest):
 
         self.send_signal("Data", data)
         self.send_signal("Overlay Data", data)
-        wait_for_image(self.widget)
-
-        # recommit to avoid a bug because commit functionality is not implemented asynchronously
-        # this should be removed when properly implemented
-        self.widget.commit.now()
 
         out = self.get_output("Decorated Data")
         self.assertEqual(original_names, names(data))
@@ -127,11 +112,6 @@ class TestOWOverlay(WidgetTest):
 
         self.send_signal("Data", data)
         self.send_signal("Overlay Data", data)
-        wait_for_image(self.widget)
-
-        # recommit to avoid a bug because commit functionality is not implemented asynchronously
-        # this should be removed when properly implemented
-        self.widget.commit.now()
 
         out = self.get_output("Decorated Data")
         self.assertEqual(original_names, names(data))

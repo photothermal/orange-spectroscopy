@@ -1,3 +1,6 @@
+import time
+from typing import Optional
+
 import numpy as np
 
 from AnyQt.QtCore import Qt, QBuffer
@@ -8,13 +11,14 @@ from Orange.widgets.settings import DomainContextHandler
 from Orange.widgets.utils.itemmodels import DomainModel
 from Orange.widgets.widget import OWWidget, Input, Output, Msg
 from Orange.widgets import gui, settings
+from Orange.widgets.utils.concurrent import TaskState, ConcurrentWidgetMixin
 
 from orangewidget.settings import SettingProvider, ContextSetting
 
 import io
 from orangecontrib.spectroscopy.io.util import ConstantBytesVisibleImage
 from PIL import Image
-from orangecontrib.spectroscopy.utils import get_ndim_hyperspec
+from orangecontrib.spectroscopy.utils import get_ndim_hyperspec, InvalidAxisException
 
 from orangecontrib.spectroscopy.widgets.owhyper import BasicImagePlot
 
@@ -28,6 +32,14 @@ class AImagePlot(BasicImagePlot):
         super().__init__(parent)
         self.axes_settings_box.hide()
         self.rgb_settings_box.hide()
+        self.image_updated.connect(self.drawing_done)
+
+    def update_view(self):
+        self.drawn = False
+        super().update_view()
+
+    def drawing_done(self):
+        self.drawn = True
 
     def add_selection_actions(self, _):
         pass
@@ -36,19 +48,11 @@ class AImagePlot(BasicImagePlot):
         pass
 
 
-class ImagePreview:
-    imageplot = SettingProvider(AImagePlot)
-
-    value_type = 1
-
-    def __init__(self):
-        self.imageplot = AImagePlot(self)
-
-    def shutdown(self):
-        self.imageplot.shutdown()
+class InterruptException(Exception):
+    pass
 
 
-class OWOverlay(OWWidget):
+class OWOverlay(OWWidget, ConcurrentWidgetMixin):
     name = "Add Image Overlay"
     description = "Add an image that can be displayed in Hyper Spectra to the dataset."
     icon = "icons/bin.svg"
@@ -93,7 +97,8 @@ class OWOverlay(OWWidget):
         return None
 
     def __init__(self):
-        super().__init__()
+        OWWidget.__init__(self)
+        ConcurrentWidgetMixin.__init__(self)
 
         self.maindata = None
         self.data = None
@@ -206,62 +211,77 @@ class OWOverlay(OWWidget):
         self.imageplot.update_view()
         self.commit.deferred()
 
-    def set_vimage(self, data):
-        # Copy main data
-        newmaindata = self.maindata.copy() if self.maindata is not None else None
-        # Extract the image scales
-        if data is not None:
-            try:
-                hypercube, ls = get_ndim_hyperspec(
-                    data, (self.imageplot.attr_x, self.imageplot.attr_y)
-                )
-            except Exception as e:
-                self.Error.invalid_axis(str(e))
-                return
+    @staticmethod
+    def with_overlay(imageplot, data, maindata, state):
 
-            width = np.abs(ls[0][1] - ls[0][0])
-            height = np.abs(ls[1][1] - ls[1][0])
-            xres = width / hypercube.shape[:2][0]
-            yres = height / hypercube.shape[:2][1]
-            posx = ls[0][0]
-            posy = ls[1][0]
+        if data is None or maindata is None:
+            return None
 
-            # Extract the image from imageplot so the coloring is done
-            self.imageplot.img.render()  # ensures qimage is produced even when not displayed
-            im = self.imageplot.img.qimage
-            if im is not None:
-                buffer = QBuffer()
-                buffer.open(QBuffer.ReadWrite)
-                im.save(buffer, "PNG")
-                pil_im = Image.open(io.BytesIO(buffer.data()))
-                pil_im = pil_im.transpose(Image.FLIP_TOP_BOTTOM)
-                img_bytes = io.BytesIO()
-                pil_im.save(img_bytes, format="PNG")
-                # Update name
-                allnames = []
-                if "visible_images" in newmaindata.attributes:
-                    allnames = [
-                        im.name for im in newmaindata.attributes["visible_images"]
-                    ]
-                basename = "Overlay Image"
-                name = get_unique_names(names=allnames, proposed=basename)
-                # Need to modify the position and the scale since visual imageplot
-                # place the corner of the pixel to the given position
-                vimage = ConstantBytesVisibleImage(
-                    name=name,
-                    pos_x=posx - xres / 2,
-                    pos_y=posy - yres / 2,
-                    size_x=width + xres,
-                    size_y=height + yres,
-                    image_bytes=img_bytes,
-                )
+        def progress_interrupt():
+            if state.is_interruption_requested():
+                raise InterruptException
 
-                # # Assign it to the datatable attributes
-                if newmaindata and vimage is not None:
-                    if "visible_images" in newmaindata.attributes:
-                        newmaindata.attributes["visible_images"].append(vimage)
-                    else:
-                        newmaindata.attributes["visible_images"] = [vimage]
+        # wait for the image to appear
+        while True:
+            time.sleep(0.010)
+            progress_interrupt()
+            if imageplot.drawn is True:
+                break
+
+        # the following could raise an InvalidAxisException
+        hypercube, ls = get_ndim_hyperspec(
+            data, (imageplot.attr_x, imageplot.attr_y)
+        )
+
+        # if drawing failed for some reason
+        if imageplot.img.image is None:
+            return None
+
+        # Copy main data to avoid changing it in place
+        newmaindata = maindata.copy()
+
+        width = np.abs(ls[0][1] - ls[0][0])
+        height = np.abs(ls[1][1] - ls[1][0])
+        xres = width / hypercube.shape[:2][0]
+        yres = height / hypercube.shape[:2][1]
+        posx = ls[0][0]
+        posy = ls[1][0]
+
+        # Extract the image from imageplot so the coloring is done
+        imageplot.img.render()  # ensures qimage is produced even when not displayed
+        im = imageplot.img.qimage
+        buffer = QBuffer()
+        buffer.open(QBuffer.ReadWrite)
+        im.save(buffer, "PNG")
+        pil_im = Image.open(io.BytesIO(buffer.data()))
+        pil_im = pil_im.transpose(Image.FLIP_TOP_BOTTOM)
+        img_bytes = io.BytesIO()
+        pil_im.save(img_bytes, format="PNG")
+        # Update name
+        allnames = []
+        if "visible_images" in newmaindata.attributes:
+            allnames = [
+                im.name for im in newmaindata.attributes["visible_images"]
+            ]
+        basename = "Overlay Image"
+        name = get_unique_names(names=allnames, proposed=basename)
+        # Need to modify the position and the scale since visual imageplot
+        # place the corner of the pixel to the given position
+        vimage = ConstantBytesVisibleImage(
+            name=name,
+            pos_x=posx - xres / 2,
+            pos_y=posy - yres / 2,
+            size_x=width + xres,
+            size_y=height + yres,
+            image_bytes=img_bytes,
+        )
+
+        # # Assign it to the datatable attributes
+        if newmaindata and vimage is not None:
+            if "visible_images" in newmaindata.attributes:
+                newmaindata.attributes["visible_images"].append(vimage)
+            else:
+                newmaindata.attributes["visible_images"] = [vimage]
 
         return newmaindata
 
@@ -283,15 +303,30 @@ class OWOverlay(OWWidget):
         self.imageplot.update_view()
 
     def handleNewSignals(self):
-        self.commit.deferred()
+        self.commit.now()
 
     @gui.deferred
     def commit(self):
+        self.cancel()
         self.Warning.nan_in_image.clear()
         self.Error.invalid_axis.clear()
         self.Error.invalid_block.clear()
+        self.start(OWOverlay.with_overlay, self.imageplot, self.data, self.maindata)
 
-        self.Outputs.outdata.send(self.set_vimage(self.data))
+    def on_partial_result(self, _):
+        pass
+
+    def on_done(self, result: Optional[Table]):
+        self.Outputs.outdata.send(result)
+
+    def on_exception(self, ex):
+        if isinstance(ex, InvalidAxisException):
+            self.Error.invalid_axis(str(ex))
+        self.Outputs.outdata.send(None)
+
+    def onDeleteWidget(self):
+        self.shutdown()
+        super().onDeleteWidget()
 
 
 if __name__ == "__main__":  # pragma: no cover
