@@ -55,7 +55,7 @@ class InterruptException(Exception):
 class OWOverlay(OWWidget, ConcurrentWidgetMixin):
     name = "Add Image Overlay"
     description = "Add an image that can be displayed in Hyper Spectra to the dataset."
-    icon = "icons/bin.svg"
+    icon = "icons/overlay.svg"
 
     settings_version = 2
     value_type = 1
