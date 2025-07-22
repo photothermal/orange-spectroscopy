@@ -618,7 +618,7 @@ class OWPolar(OWWidget, ConcurrentWidgetMixin):
             <body>\
             When publishing results, consider citing:<br> \
             - <a href="https://doi.org/10.1021/ma302560q">Hikima et al. (2013)</a><br> \
-            - <a href="">Gassner et al. (2025)</a> \
+            - <a href="https://doi.org/10.1016/j.compbiomed.2025.110573">Gassner et al. (2025)</a> \
             </body>')
 
         self._change_input()
