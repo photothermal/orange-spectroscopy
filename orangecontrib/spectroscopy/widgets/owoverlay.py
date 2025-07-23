@@ -71,7 +71,7 @@ class OWOverlay(OWWidget, ConcurrentWidgetMixin):
 
     # Define inputs and outputs
     class Inputs:
-        maindata = Input("Data", Table, default=True)
+        maindata = Input("Data", Table)
         data = Input("Overlay Data", Table)
 
     class Outputs:
