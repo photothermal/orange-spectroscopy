@@ -1771,11 +1771,8 @@ class OWHyper(OWWidget, SelectionOutputsMixin):
         splitter.setOrientation(Qt.Vertical)
         self.imageplot = ImagePlot(self)
         self.imageplot.selection_changed.connect(self.output_image_selection)
-        # add image settings to the main panne after ImagePlot.__init__
-        iabox.layout().addWidget(self.imageplot.axes_settings_box)
-        icbox.layout().addWidget(self.imageplot.color_settings_box)
 
-        # add image settings to the main panne after ImagePlot.__init__
+        # add image settings to the main pane after ImagePlot.__init__
         iabox.layout().addWidget(self.imageplot.axes_settings_box)
         icbox.layout().addWidget(self.imageplot.color_settings_box)
         ivbox.layout().addWidget(self.imageplot.setup_vector_plot_controls())
